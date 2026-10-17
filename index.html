@@ -53,6 +53,7 @@ button:disabled { cursor: default; }
 .icon-btn[aria-pressed="false"] { color: var(--muted); }
 .icon-btn[aria-pressed="false"] .on, .icon-btn[aria-pressed="true"] .off { display: none; }
 .top .sp { margin-left: auto; }
+.q-btn { height: 34px; padding: 0 10px; background: transparent; border: 1px solid var(--line-2); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
 
 /* stage */
 .stage { position: relative; overflow: hidden; background: #26282a; min-height: 0; }
@@ -314,6 +315,7 @@ button:disabled { cursor: default; }
   <header class="top">
     <div class="brand"><b id="brandName">XIN STUDIO</b><strong>摄影师装备舱</strong></div>
     <span class="sp"></span>
+    <button type="button" class="q-btn" id="qBtn" aria-label="切换画质">画质 中</button>
     <button type="button" class="icon-btn" id="musicBtn" aria-pressed="true" aria-label="背景音乐">
       <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/><path class="off" d="M3 3l18 18"/></svg>
     </button>
@@ -380,6 +382,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* =====================================================================
    配置区：品牌、价格、摄影师、器材都在这里改（价格为初稿，可随时调整）
@@ -432,22 +442,65 @@ const STAT_KEYS = [['q', '画质'], ['l', '光影'], ['m', '氛围'], ['v', '动
 /* ---------- 3D helpers ---------- */
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .55, metalness: .2, ...o });
+/* ---------- 程序生成的表面纹理（法线贴图） ---------- */
+function heightToNormal(size, fn, strength = 2) {
+  const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d'), img = x.createImageData(size, size), h = new Float32Array(size * size);
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) h[j * size + i] = fn(i, j);
+  const H = (i, j) => h[((j + size) % size) * size + ((i + size) % size)];
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) { const dx = (H(i + 1, j) - H(i - 1, j)) * strength, dy = (H(i, j + 1) - H(i, j - 1)) * strength, nz = 1 / Math.hypot(dx, dy, 1), o = (j * size + i) * 4; img.data[o] = (-dx * nz * .5 + .5) * 255; img.data[o + 1] = (-dy * nz * .5 + .5) * 255; img.data[o + 2] = (nz * .5 + .5) * 255; img.data[o + 3] = 255; }
+  x.putImageData(img, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const pebblePts = Array.from({ length: 70 }, (_, i) => [((i * 37.3) % 97) / 97 * 96, ((i * 61.7) % 89) / 89 * 96, 5 + (i * 13 % 7)]);
+const pebbleN = heightToNormal(96, (i, j) => { let m = 0; for (const [px, py, r] of pebblePts) { let dx = Math.abs(i - px), dy = Math.abs(j - py); dx = Math.min(dx, 96 - dx); dy = Math.min(dy, 96 - dy); const v = 1 - Math.hypot(dx, dy) / r; if (v > m) m = v; } return Math.sqrt(Math.max(0, m)); }, 2.4);
+pebbleN.repeat.set(55, 55);                                 // 皮革颗粒：挤出几何体的 UV 以米为单位
+const knurlN = heightToNormal(64, i => .5 + .5 * Math.sin(i / 64 * Math.PI * 2 * 8), 3.5); knurlN.repeat.set(14, 1);   // 对焦环、拨盘滚花
+const carbonN = heightToNormal(64, (i, j) => ((Math.floor(i / 8) + Math.floor(j / 8)) % 2 ? Math.sin(i / 8 * Math.PI) : Math.sin(j / 8 * Math.PI)) * .5 + .5, 1.6); carbonN.repeat.set(6, 6);
+const weaveN = heightToNormal(32, (i, j) => (Math.sin(i / 4 * Math.PI) * Math.sin(j / 4 * Math.PI)) * .5 + .5, 1.2); weaveN.repeat.set(10, 10);
+const N2 = (x, y = x) => new THREE.Vector2(x, y);
+const phys = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: .5, metalness: .1, ...o });
 const M = {
-  body: mat(0x1e1f21, { roughness: .6, metalness: .25 }),
-  rubber: mat(0x111112, { roughness: .9, metalness: 0 }),
-  black: mat(0x0c0c0d, { roughness: .45, metalness: .3 }),
-  metal: mat(0x55585d, { roughness: .35, metalness: .8 }),
-  silver: mat(0xb8bcc2, { roughness: .3, metalness: .9 }),
-  white: mat(0xe6e6e2, { roughness: .45, metalness: .05 }),
-  glass: mat(0x0d1a26, { roughness: .05, metalness: .9, envMapIntensity: 2 }),
-  orange: mat(0xe8662a, { roughness: .5 }),
-  red: mat(0xc0282c, { roughness: .5 }),
-  nylon: mat(0x1b1c1d, { roughness: .95, metalness: 0 }),
-  gold: mat(0xc9a34a, { roughness: .35, metalness: .8 }),
-  case: mat(0x161718, { roughness: .7, metalness: .05 }),
+  body: phys(0x1c1d1f, { roughness: .42, metalness: .15, clearcoat: .35, clearcoatRoughness: .45 }),
+  leather: phys(0x151516, { roughness: .78, metalness: 0, normalMap: pebbleN, normalScale: N2(.85) }),
+  rubber: mat(0x121213, { roughness: .82, metalness: 0, normalMap: knurlN, normalScale: N2(1.3) }),
+  black: phys(0x0d0d0e, { roughness: .38, metalness: .3, clearcoat: .2 }),
+  metal: phys(0x76797f, { roughness: .28, metalness: 1 }),
+  silver: phys(0xd0d3d8, { roughness: .2, metalness: 1 }),
+  white: phys(0xebebe7, { roughness: .32, metalness: 0, clearcoat: .4 }),
+  glass: phys(0x0a0e13, { roughness: .02, metalness: .1, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.8, iridescenceThicknessRange: [220, 680], envMapIntensity: 1.5 }),
+  screen: phys(0x05070a, { roughness: .06, metalness: .2, clearcoat: 1, envMapIntensity: 1.6 }),
+  orange: phys(0xf06a1f, { roughness: .42, clearcoat: .3 }),
+  red: phys(0xc8242a, { roughness: .4, clearcoat: .3 }),
+  nylon: mat(0x1b1c1d, { roughness: .95, metalness: 0, normalMap: weaveN, normalScale: N2(.6) }),
+  gold: phys(0xd2aa52, { roughness: .3, metalness: 1 }),
+  case: phys(0x161718, { roughness: .62, metalness: .05, clearcoat: .2 }),
+  gun: phys(0x3f4247, { roughness: .4, metalness: .55, clearcoat: .25 }),
+  carbon: phys(0x18191b, { roughness: .3, metalness: .4, clearcoat: .9, clearcoatRoughness: .15, normalMap: carbonN, normalScale: N2(.5) }),
+  grey: phys(0x8b8e93, { roughness: .45, metalness: .1, clearcoat: .3 }),
 };
-function box(w, h, d, m, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; return o; }
+// 圆角盒子：边缘有倒角才能接住高光，看起来才像真东西
+const geoCache = new Map();
+function rboxGeo(w, h, d) { const k = `${w.toFixed(4)}|${h.toFixed(4)}|${d.toFixed(4)}`; let g = geoCache.get(k); if (!g) { const m = Math.min(w, h, d); g = m < .005 ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, Math.min(m * .22, .018)); geoCache.set(k, g); } return g; }
+function box(w, h, d, m, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(rboxGeo(w, h, d), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; return o; }
 function cyl(rt, rb, h, m, seg = 32, open = false) { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg, 1, open), m); o.castShadow = o.receiveShadow = true; return o; }
+// 轮廓挤出（相机机身、握把、取景器）
+function rrect(w, h, r) { const s = new THREE.Shape(), x = -w / 2, y = -h / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s; }
+function trap(wb, wt, h, r) { const s = new THREE.Shape(); s.moveTo(-wb / 2, 0); s.lineTo(wb / 2, 0); s.lineTo(wt / 2 + r * .3, h - r); s.quadraticCurveTo(wt / 2, h, wt / 2 - r, h); s.lineTo(-wt / 2 + r, h); s.quadraticCurveTo(-wt / 2, h, -wt / 2 - r * .3, h - r); s.lineTo(-wb / 2, 0); return s; }
+function ext(shape, depth, m, bev = .003) { const g = new THREE.ExtrudeGeometry(shape, { depth: Math.max(.001, depth - bev * 2), bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 10 }); g.translate(0, 0, -(depth - bev * 2) / 2); g.computeVertexNormals(); const o = new THREE.Mesh(g, m); o.castShadow = o.receiveShadow = true; return o; }
+// 品牌字样、标识（贴花）
+const labelCache = new Map();
+function label(text, w, h, { color = '#e9e9e6', bg = null, weight = 700, family = '"Helvetica Neue", Arial, sans-serif', spacing = .08, rough = .5 } = {}) {
+  const key = [text, w, h, color, bg, weight, family].join('|'); let tex = labelCache.get(key);
+  if (!tex) {
+    const H = 128, W = Math.max(64, Math.min(2048, Math.round(H * w / h))), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    if (bg) { x.fillStyle = bg; x.fillRect(0, 0, W, H); }
+    x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle'; let fs = H * .78; x.font = `${weight} ${fs}px ${family}`;
+    if ('letterSpacing' in x) x.letterSpacing = `${fs * spacing}px`;
+    while (x.measureText(text).width > W * .94 && fs > 8) { fs -= 4; x.font = `${weight} ${fs}px ${family}`; if ('letterSpacing' in x) x.letterSpacing = `${fs * spacing}px`; }
+    x.fillText(text, W / 2, H * .54); tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; labelCache.set(key, tex);
+  }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, transparent: !bg, roughness: rough, metalness: 0, polygonOffset: true, polygonOffsetFactor: -4 }));
+  return m;
+}
 function sph(r, m) { const o = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), m); o.castShadow = true; return o; }
 function rod(a, b, r, m) { const d = new THREE.Vector3().subVectors(b, a), len = d.length(); const o = cyl(r, r, len, m, 10); o.position.copy(a).addScaledVector(d, .5); o.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize()); return o; }
 function grp(...c) { const g = new THREE.Group(); c.forEach(x => g.add(x)); return g; }
@@ -459,40 +512,74 @@ const softTex = canvasTex(64, 64, (c, w) => { const gr = c.createRadialGradient(
 const screenTex = canvasTex(160, 100, (c, w, h) => { const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#24395a'); g.addColorStop(1, '#e0874a'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = '#e33'; c.beginPath(); c.arc(14, 14, 5, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 13px sans-serif'; c.fillText('REC 4K', 24, 19); });
 
 /* ---------- gear models (real-world scale, metres) ---------- */
-function lensFwd(len, r, mtl = M.black, hood = false) {
-  const g = grp(at(fwd(cyl(r, r * .96, len, mtl)), 0, 0, len / 2));
-  for (const k of [.3, .62]) g.add(at(fwd(cyl(r * 1.03, r * 1.03, len * .18, M.rubber)), 0, 0, len * k));
-  g.add(at(fwd(cyl(r * .82, r * .82, .003, M.glass)), 0, 0, len + .001));
-  g.add(at(box(.006, .004, .01, M.orange), 0, r, len * .82));
-  if (hood) g.add(at(fwd(cyl(r * 1.25, r * 1.05, len * .35, M.black, 32, true)), 0, 0, len + len * .17));
-  return g;
+/* ---------- 镜头：按真实镜头轮廓车出来（Lathe），带滚花对焦环、镀膜玻璃、GM 标 ---------- */
+function lensFwd(len, r, mtl = M.black, hood = false, tag = 'GM') {
+  const inner = new THREE.Group(), P = (x, y) => new THREE.Vector2(x, y);
+  const prof = [P(r * .64, 0), P(r * .64, .004), P(r * .88, .005), P(r * .9, .012), P(r * .93, .014), P(r * .95, len * .2), P(r, len * .23), P(r, len * .96), P(r * .97, len), P(r * .83, len), P(r * .8, len - .006)];
+  const barrel = new THREE.Mesh(new THREE.LatheGeometry(prof, 56), mtl); barrel.castShadow = true; inner.add(barrel);
+  const ring = (w, y) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.012, r * 1.012, w, 56, 1, true), M.rubber); o.position.y = y; o.castShadow = true; return o; };
+  inner.add(ring(len * .2, len * .42), ring(len * .12, len * .76), at(cyl(r * .66, r * .66, .004, M.silver, 40), 0, .002, 0));
+  const Rg = r * 1.6, cap = new THREE.Mesh(new THREE.SphereGeometry(Rg, 48, 10, 0, Math.PI * 2, 0, Math.asin(.5)), M.glass); cap.position.y = len - .005 - Rg; inner.add(cap);
+  inner.add(at(cyl(r * .82, r * .82, .002, M.black, 40, true), 0, len - .004, 0));
+  for (let i = 0; i < 3; i++) inner.add(at(box(.0012, .006, .0012, M.white), 0, len * (.3 + i * .05), -r * .99));
+  if (tag) { const b = label(tag, .014, .007, { color: '#fff', bg: '#e05a1e', spacing: .02 }); b.position.set(0, len * .9, -r * 1.002); b.rotation.y = Math.PI; inner.add(b); }
+  if (hood) inner.add(at(cyl(r * 1.26, r * 1.06, len * .35, M.black, 48, true), 0, len + len * .17, 0));
+  inner.rotation.x = Math.PI / 2; return grp(inner);
 }
 function lensHang(len, r, mtl = M.black, hood = false) {
   const w = new THREE.Group(), l = lensFwd(len, r, mtl, hood);
   l.rotation.x = Math.PI / 2; w.add(l);
-  w.add(at(box(.03, .05, .012, M.nylon), 0, -.012, -r - .004));
+  w.add(at(box(.03, .05, .012, M.nylon), 0, -.012, -r - .004), at(cyl(r * 1.02, r * 1.02, .012, M.black, 40), 0, .002, 0));   // 腰带挂扣 + 后盖
   return w;
 }
-function cameraBody({ w = .131, h = .096, d = .08, mtl = M.body, accent = null, gfx = false, x2d = false, lens = true } = {}) {
-  const g = new THREE.Group();
-  g.add(box(w, h * .78, d * .62, x2d ? M.silver : mtl, 0, -h * .08, 0));
-  g.add(box(.034, h * .82, d * .98, M.rubber, w / 2 - .02, -h * .07, .012));
-  g.add(box(w * .42, h * .3, d * .52, mtl, -.004, h * .3, -.004));
-  g.add(box(.055, .034, .012, M.glass, -.03, -h * .1, -d * .32));
-  for (const x of [-w * .36, w * .3]) g.add(at(cyl(.011, .011, .008, M.metal, 16), x, h * .32, 0));
-  if (accent) g.add(box(.012, .006, .012, accent, w * .32, h * .33, .01));
-  if (gfx) g.add(box(.03, .02, .03, mtl, w * .3, h * .38, -.005));
-  if (x2d) g.add(box(w * .98, .006, d * .6, M.black, 0, h * .31, 0));
-  g.add(at(fwd(cyl(.03, .03, .012, M.metal)), -.01, -h * .05, d * .31 + .006));
-  if (lens) { const l = lensFwd(.12, .042); l.position.set(-.01, -h * .05, d * .31 + .012); g.add(l); }
+/* ---------- 相机机身：按真实外形挤出轮廓
+   参考尺寸（宽×高×深 mm）：A7 IV 131×96×80，A7R V 131×97×82，GFX100 II 152×117×99，X2D 149×106×75
+   握把在机身右手侧（-x），取景器凸起在中间偏左，转盘在握把一侧 */
+const CAMS = {
+  a74: { w: .131, h: .096, d: .08, logo: 'SONY', badge: 'α' },
+  a7r5: { w: .131, h: .097, d: .082, logo: 'SONY', badge: 'α', ring: 0xd8541e },
+  gfx: { w: .152, h: .117, d: .099, logo: 'FUJIFILM', hump: .3, topLcd: true },
+  x2d: { w: .149, h: .106, d: .075, logo: 'HASSELBLAD', hump: .13, color: 0x56595d, shutter: 'orange' },
+};
+function cameraBody(kind = 'a74', { lens = true } = {}) {
+  const B = CAMS[kind] || CAMS.a74, { w, h, d } = B, g = new THREE.Group();
+  const bodyM = B.color ? phys(B.color, { roughness: .5, metalness: .25, clearcoat: .2 }) : M.body;
+  const mainH = h * .72, mainY = -h * .14, dz = d * .56, topY = mainY + mainH / 2;
+  g.add(at(ext(rrect(w, mainH, .012), dz, bodyM), 0, mainY, 0));
+  g.add(at(ext(rrect(w * .84, mainH * .78, .009), .004, M.leather, .0012), w * .04, mainY - mainH * .05, dz / 2 + .0008));
+  const gd = d * .98, grip = ext(rrect(.042, mainH * 1.02, .017), gd, M.leather, .007); grip.position.set(-w / 2 + .022, mainY - .002, gd / 2 - dz / 2); g.add(grip);
+  const hw = w * (B.hump === .13 ? .7 : .42), hh = h * (B.hump ?? .28), hx = w * .05;
+  const hump = ext(trap(hw, hw * (B.hump === .13 ? .96 : .7), hh, .007), dz * .96, bodyM); hump.position.set(hx, topY - .002, -.001); g.add(hump);
+  g.add(box(.022, .003, .02, M.metal, hx, topY + hh + .0005, -.002), box(hw * .62, hh * .62, .02, M.rubber, hx, topY + hh * .45, -dz / 2 - .008));
+  const dial = (x, r, hgt, z) => g.add(at(cyl(r, r, hgt, M.rubber, 40), x, topY + hgt / 2, z), at(cyl(r * .7, r * .7, .0015, M.metal, 32), x, topY + hgt + .0007, z));
+  if (B.topLcd) { g.add(box(.034, .003, .026, M.screen, -w * .26, topY + .0015, -.004)); dial(w * .34, .013, .01, -.006); }
+  else { dial(-w * .3, .012, .009, -.008); dial(-w * .17, .0105, .007, .002); dial(w * .36, .012, .009, -.006); }
+  g.add(at(cyl(.0075, .0075, .005, B.shutter === 'orange' ? M.orange : M.silver, 24), -w / 2 + .024, topY + .006, gd - dz / 2 - .022), at(cyl(.0095, .0095, .002, M.metal, 24), -w / 2 + .024, topY + .003, gd - dz / 2 - .022));
+  g.add(box(.074, .05, .005, M.screen, w * .05, mainY - .003, -dz / 2 - .003), box(.082, .058, .004, M.black, w * .05, mainY - .003, -dz / 2 - .0012));
+  for (const sx of [-1, 1]) g.add(at(box(.004, .012, .008, M.metal), sx * (w / 2 + .001), topY - .01, .006));
+  const mx = w * .05, my = mainY + mainH * .04;
+  g.add(at(fwd(cyl(.031, .031, .007, M.metal, 48)), mx, my, dz / 2 + .0045));
+  if (B.ring) g.add(at(new THREE.Mesh(new THREE.TorusGeometry(.0322, .0012, 8, 48), M.orange), mx, my, dz / 2 + .0082));
+  if (B.hump === .13) { const l = label(B.logo, .06, .007, { spacing: .32, weight: 500 }); l.position.set(hx, topY + hh * .55, dz * .48 + .0012); g.add(l); }
+  else { const l = label(B.logo, hw * .62, hh * .2, { spacing: .12 }); l.position.set(hx, topY + hh * .52, dz * .48 + .0012); g.add(l); }
+  if (B.badge) { const b = label(B.badge, .012, .014, { family: 'Georgia, serif', weight: 400, spacing: 0 }); b.position.set(w / 2 - .018, topY - .013, dz / 2 + .0035); g.add(b); }
+  if (lens) { const l = lensFwd(.12, .042, M.black, false, kind === 'x2d' ? 'XCD' : kind === 'gfx' ? 'GF' : 'GM'); l.position.set(mx, my, dz / 2 + .008); g.add(l); }
   return g;
 }
-function cineCamera() {   // Sony FX3 in a cage with top handle, monitor and shoulder pad
-  const g = grp(box(.13, .078, .085, M.body), box(.006, .1, .1, M.metal, -.07, .005, 0), box(.006, .1, .1, M.metal, .07, .005, 0), box(.146, .006, .1, M.metal, 0, .056, 0),
-    box(.012, .035, .012, M.metal, 0, .075, -.03), box(.012, .035, .012, M.metal, 0, .075, .04), box(.016, .016, .12, M.black, 0, .097, .005),
-    box(.09, .06, .012, M.black, -.03, .14, .02), at(new THREE.Mesh(new THREE.PlaneGeometry(.08, .05), new THREE.MeshBasicMaterial({ map: screenTex })), -.03, .14, .027),
-    box(.07, .03, .16, M.nylon, 0, -.06, -.04), rod(V(-.03, -.04, .05), V(-.03, -.04, .2), .007, M.metal), rod(V(.03, -.04, .05), V(.03, -.04, .2), .007, M.metal));
-  const l = lensFwd(.11, .04); l.position.set(0, 0, .043); g.add(l);
+/* Sony FX3：小巧的电影机身（130×78×85 mm）+ XLR 提手；肩扛套件 */
+function fx3Body() {
+  const g = grp(box(.13, .078, .085, M.gun), box(.044, .086, .094, M.leather, -.046, -.003, .006), box(.07, .052, .006, M.screen, .02, .002, -.045));
+  for (let i = 0; i < 5; i++) g.add(at(cyl(.003, .003, .002, M.black, 12), -.03 + i * .016, .0395, -.02, 0, 0, 0));
+  const hd = grp(box(.11, .022, .03, M.black, 0, .018, 0), box(.012, .018, .012, M.black, -.04, 0, 0), box(.012, .018, .012, M.black, .04, 0, 0), at(fwd(cyl(.011, .011, .028, M.metal, 16)), -.025, .018, .028), at(fwd(cyl(.011, .011, .028, M.metal, 16)), .025, .018, .028), at(fwd(cyl(.012, .012, .05, M.black, 16)), 0, .036, .03));
+  hd.position.set(0, .05, 0); g.add(hd);
+  const l1 = label('SONY', .04, .009); l1.position.set(.066, .02, .01); l1.rotation.y = Math.PI / 2; g.add(l1);
+  const l2 = label('FX3', .016, .007, { color: '#c9cbcf' }); l2.position.set(.066, -.022, .018); l2.rotation.y = Math.PI / 2; g.add(l2);
+  const l = lensFwd(.11, .042); l.position.set(.006, -.004, .0425); g.add(l); return g;
+}
+function cineCamera() {
+  const g = fx3Body();
+  g.add(box(.07, .03, .16, M.nylon, 0, -.06, -.04), rod(V(-.03, -.04, .05), V(-.03, -.04, .2), .007, M.metal), rod(V(.03, -.04, .05), V(.03, -.04, .2), .007, M.metal));
+  const mon = grp(box(.1, .066, .016, M.black), at(new THREE.Mesh(new THREE.PlaneGeometry(.088, .055), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false })), 0, 0, .0085)); mon.position.set(-.03, .135, .02); mon.rotation.x = -.15; g.add(mon);
   return g;
 }
 function stand(h) {
@@ -501,17 +588,21 @@ function stand(h) {
   g.add(at(cyl(.014, .014, h, M.silver, 12), 0, h / 2, 0), at(cyl(.02, .02, .05, M.black, 12), 0, .42, 0));
   return g;
 }
+/* DJI Mavic 3 Pro：灰色机身、前置三摄云台、折叠机臂、双叶桨 */
 function drone() {
-  const g = new THREE.Group(), rotors = [], arm = mat(0x4c4f53);
-  g.add(box(.09, .05, .2, mat(0x5a5d61, { roughness: .5 })), box(.07, .03, .05, M.black, 0, .035, -.04));
+  const g = new THREE.Group(), rotors = [];
+  g.add(box(.092, .052, .2, M.grey), box(.08, .02, .16, phys(0x6f7277, { roughness: .4, clearcoat: .5 }), 0, .03, -.01), box(.05, .012, .03, M.screen, 0, .028, .085));
   for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-    const tip = V(sx * .15, sz > 0 ? 0 : .02, sz * .11);
-    g.add(rod(V(sx * .03, 0, sz * .05), tip, .009, arm), at(cyl(.014, .014, .022, M.black, 12), tip.x, tip.y + .015, tip.z));
+    const tip = V(sx * .16, sz > 0 ? .012 : -.008, sz * .12);
+    g.add(rod(V(sx * .035, sz > 0 ? .012 : -.008, sz * .06), tip, .01, M.grey), at(cyl(.016, .018, .026, M.black, 20), tip.x, tip.y + .014, tip.z));
+    if (sz > 0) g.add(rod(V(tip.x * .9, tip.y, tip.z), V(tip.x * .9, -.05, tip.z), .004, M.grey));
     const r = new THREE.Group(); r.position.set(tip.x, tip.y + .03, tip.z);
-    r.add(box(.2, .002, .014, mat(0x2a2b2d)), box(.014, .002, .2, mat(0x2a2b2d)));
+    for (const a of [0, Math.PI]) { const blade = box(.12, .002, .018, phys(0x26272a, { roughness: .5 })); blade.position.x = Math.cos(a) * .06; blade.position.z = Math.sin(a) * .06; blade.rotation.y = -a; blade.rotation.x = .12 * (a ? -1 : 1); r.add(blade); }
     g.add(r); rotors.push(r);
   }
-  g.add(at(box(.04, .03, .03, M.black), 0, -.035, .1), at(fwd(cyl(.011, .011, .01, M.glass)), 0, -.035, .118));
+  const gim = grp(box(.07, .046, .046, M.black), box(.062, .004, .004, M.metal, 0, .025, 0));
+  [[-.02, .011], [.004, .0075], [.024, .0065]].forEach(([x, rr]) => gim.add(at(fwd(cyl(rr, rr, .006, M.glass, 24)), x, 0, .025)));
+  gim.position.set(0, -.032, .118); g.add(gim);
   g.userData.rotors = rotors; return g;
 }
 
@@ -530,19 +621,37 @@ function videoTripod(h) {
   g.add(at(box(.1, .07, .12, M.body), 0, h + .035, 0), rod(V(0, h + .05, -.05), V(-.1, h - .03, -.48), .011, M.black));
   return g;
 }
-function fx6Body() {   // Sony FX6：机身 + 提手 + 侧屏 + V 口电池 + 镜头
-  const g = grp(box(.116, .114, .153, M.body), box(.012, .04, .012, M.metal, 0, .077, -.04), box(.012, .04, .012, M.metal, 0, .077, .05), box(.02, .02, .15, M.black, 0, .1, .005), at(fwd(cyl(.014, .014, .05, M.black, 12)), 0, .12, .08), box(.095, .13, .04, M2.vlock, 0, 0, -.096), box(.09, .056, .012, M.black, -.09, .09, .05), at(screenPlane(.08, .046, screenTex), -.09, .09, .057));
-  const l = lensFwd(.14, .046); l.position.set(0, 0, .077); g.add(l); return g;
+/* Sony FX6（参考实拍）：枪灰色方机身、顶部芝士板、长提手带 XLR、前端翻转屏、侧面按键区、BP-U 电池 */
+const holeTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; const x = c.getContext('2d'); x.fillStyle = '#2c2e32'; x.fillRect(0, 0, 256, 256); for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) { x.fillStyle = '#08090a'; x.beginPath(); x.arc(24 + i * 42, 24 + j * 42, (i + j) % 3 ? 7 : 11, 0, 7); x.fill(); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const sidePanelTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 192; const x = c.getContext('2d'); x.fillStyle = '#3a3d42'; x.fillRect(0, 0, 256, 192); x.fillStyle = '#16171a'; for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) x.fillRect(20 + i * 34, 30 + j * 40, 24, 16); x.strokeStyle = '#16171a'; x.lineWidth = 6; for (const [cx, cy] of [[200, 60], [200, 130]]) { x.beginPath(); x.arc(cx, cy, 20, 0, 7); x.stroke(); } x.fillStyle = '#9aa0a8'; x.font = 'bold 13px sans-serif'; x.fillText('ND', 20, 22); x.fillText('ASSIGN', 20, 178); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+function fx6Body() {
+  const g = grp(box(.114, .116, .153, M.gun), box(.1, .008, .13, M.black, 0, .062, -.005));
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(.096, .126), new THREE.MeshStandardMaterial({ map: holeTex, roughness: .5, metalness: .4 })); top.rotation.x = -Math.PI / 2; top.position.set(0, .0665, -.005); g.add(top);
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(.12, .075), new THREE.MeshStandardMaterial({ map: sidePanelTex, roughness: .5, metalness: .3 })); side.rotation.y = Math.PI / 2; side.position.set(.0575, -.012, -.01); g.add(side);
+  const l1 = label('SONY', .046, .011); l1.rotation.y = Math.PI / 2; l1.position.set(.058, .036, -.03); g.add(l1);
+  const l2 = label('FX6', .02, .008, { color: '#c9cbcf' }); l2.rotation.y = Math.PI / 2; l2.position.set(.058, -.052, -.05); g.add(l2);
+  const path = new THREE.CatmullRomCurve3([V(0, .066, .045), V(0, .1, .05), V(0, .118, .02), V(0, .118, -.05), V(0, .108, -.095), V(0, .075, -.098)]);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(path, 40, .011, 12, false), M.black));
+  g.add(box(.05, .034, .05, M.black, 0, .12, .07), at(fwd(cyl(.011, .011, .03, M.metal, 16)), -.014, .12, .1), at(fwd(cyl(.011, .011, .03, M.metal, 16)), .014, .12, .1), at(fwd(cyl(.015, .015, .07, M.black, 16)), 0, .145, .085));
+  const arm = rod(V(.02, .125, .09), V(.075, .12, .12), .007, M.black); g.add(arm);
+  const mon = grp(box(.098, .066, .016, M.black), at(new THREE.Mesh(new THREE.PlaneGeometry(.086, .054), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false })), 0, 0, .0085)); mon.position.set(.085, .12, .125); mon.rotation.y = .9; g.add(mon);
+  g.add(box(.072, .095, .04, M.black, 0, -.01, -.097), box(.06, .004, .03, M.metal, 0, .04, -.097));
+  const l = lensFwd(.15, .046, M.black, false, 'G'); l.position.set(0, -.004, .0765); g.add(l); return g;
 }
-function fx6Rig() { const g = videoTripod(1.3), b = fx6Body(); b.position.y = 1.3 + .07 + .057; g.add(b); return g; }
+function fx6Rig() { const g = videoTripod(1.3), b = fx6Body(); b.position.y = 1.3 + .07 + .058; g.add(b); return g; }
 function fs5Body() {
-  const g = grp(box(.1, .1, .17, M.body), box(.035, .1, .05, M.rubber, .068, -.01, .05), box(.016, .016, .13, M.black, 0, .075, 0), box(.012, .03, .012, M.metal, 0, .06, -.05), box(.012, .03, .012, M.metal, 0, .06, .05), box(.07, .045, .01, M.black, -.03, .065, .09));
-  const l = lensFwd(.11, .04); l.position.set(0, 0, .085); g.add(l); return g;
+  const g = grp(box(.1, .1, .17, M.gun), box(.04, .1, .05, M.leather, -.068, -.01, .05), box(.016, .016, .13, M.black, 0, .075, 0), box(.012, .03, .012, M.metal, 0, .06, -.05), box(.012, .03, .012, M.metal, 0, .06, .05), box(.07, .045, .01, M.screen, .03, .065, .09));
+  const l1 = label('SONY', .04, .01); l1.rotation.y = Math.PI / 2; l1.position.set(.0505, .025, -.02); g.add(l1);
+  const l = lensFwd(.11, .04, M.black, false, 'G'); l.position.set(0, 0, .085); g.add(l); return g;
 }
 function fs5Rig() { const g = videoTripod(1.55), b = fs5Body(); b.position.y = 1.55 + .07 + .05; g.add(b); return g; }
+/* DJI RS 4 Pro：碳纤维轴臂、黑色电机、带屏幕的握柄、BG30 电池手柄 + 三脚架底座 */
 function gimbalUnit() {
-  const g = grp(rod(V(0, 0, 0), V(.12, .01, .06), .008, M.black), rod(V(0, 0, 0), V(-.1, .01, .08), .008, M.black), rod(V(0, 0, 0), V(0, .01, -.12), .008, M.black), at(cyl(.02, .02, .26, M.black), 0, .14, 0), at(cyl(.03, .03, .04, M.body), 0, .29, 0), box(.012, .14, .012, M.metal, .08, .36, 0), box(.09, .012, .012, M.metal, .04, .43, 0), at(cyl(.022, .022, .02, M.red, 16), .08, .3, 0));
-  const c = cameraBody(); c.scale.setScalar(.85); c.position.set(0, .38, 0); g.add(c); return g;
+  const g = grp(rod(V(0, 0, 0), V(.12, .01, .06), .007, M.black), rod(V(0, 0, 0), V(-.1, .01, .08), .007, M.black), rod(V(0, 0, 0), V(0, .01, -.12), .007, M.black));
+  g.add(at(cyl(.021, .021, .2, M.rubber, 32), 0, .11, 0), at(cyl(.024, .024, .05, M.black, 32), 0, .23, 0), box(.022, .016, .004, M.screen, 0, .24, .024));
+  g.add(at(cyl(.03, .03, .03, M.black, 32), 0, .27, 0), box(.13, .02, .03, M.carbon, .045, .28, 0), at(cyl(.027, .027, .03, M.black, 32), .1, .3, 0, 0, 0, Math.PI / 2), box(.02, .15, .03, M.carbon, .1, .37, 0), at(cyl(.027, .027, .03, M.black, 32), .085, .44, 0, 0, 0, Math.PI / 2), box(.1, .012, .05, M.carbon, .035, .44, 0));
+  const lb = label('DJI', .016, .008); lb.position.set(0, .26, .031); g.add(lb);
+  const c = cameraBody('a74'); c.scale.setScalar(.85); c.position.set(0, .48, 0); g.add(c); return g;
 }
 function roamRig() { const g = grp(box(.5, .2, .32, M.case, 0, .1, 0), box(.52, .015, .34, mat(0x0e0e0f), 0, .2, 0)); const u = gimbalUnit(); u.position.set(-.08, .205, 0); g.add(u); return g; }
 function txKit() { return grp(box(.095, .14, .045, M2.vlock, 0, .07, 0), box(.07, .006, .03, M.orange, 0, .1, .024), box(.08, .035, .1, M.black, 0, .158, -.01), rod(V(-.03, .17, -.05), V(-.03, .3, -.06), .005, M.black), rod(V(.03, .17, -.05), V(.03, .3, -.06), .005, M.black)); }
@@ -553,7 +662,8 @@ function directorDesk() {  // 导播台 BMD 4K 2 M/E + 多画面监看 + 导演
   const g = table(1.4, .65), panel = box(.78, .05, .28, M2.panel, 0, .79, .02); g.add(panel);
   const cols = [0xd23b3b, 0x3bb85a, 0xdddddd];
   for (let r = 0; r < 3; r++) for (let i = 0; i < 10; i++) g.add(box(.03, .012, .03, mat(i === 2 + r ? cols[r] : 0x55575c, { roughness: .4, emissive: i === 2 + r ? cols[r] : 0, emissiveIntensity: .6 }), -.3 + i * .05, .82, -.07 + r * .055));
-  g.add(box(.03, .09, .03, M.black, .34, .86, .02));
+  g.add(box(.03, .09, .03, M.black, .34, .86, .02), box(.12, .005, .05, M.screen, -.3, .818, .12), box(.12, .005, .05, M.screen, .12, .818, .12), at(sph(.012, M.black), .26, .83, .1));
+  { const lb = label('Blackmagic', .1, .014, { color: '#d7d7d7', weight: 600 }); lb.rotation.x = -Math.PI / 2; lb.position.set(-.22, .816, -.11); g.add(lb); }
   for (const x of [-.36, .36]) { const m = monitor(.5, .3, multiTex); m.position.set(x, .765 + .16 + .16, .2); m.rotation.y = Math.PI; g.add(m); }
   const p = deskPerson(DIRECTOR_LOOK); if (p) g.add(p); return g;
 }
@@ -626,10 +736,10 @@ const BELT = [[.205, .03], [.2, -.08], [.12, -.155], [0, -.18], [-.12, -.155], [
 const belt = i => [BELT[i][0], BELT_Y, BELT[i][1]];
 const ITEMS = [
   // 机身
-  { id: 'body_a74', cat: 'body', name: 'Sony A7 IV', model: '全画幅 · 3300 万像素', r: 'base', price: 0, st: { q: 12 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody() },
-  { id: 'body_a7r5', cat: 'body', name: 'Sony A7R V', model: '高像素 · 6100 万，放大看细节', r: 'adv', price: 100, st: { q: 22 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody({ accent: M.orange }) },
-  { id: 'body_gfx', cat: 'body', name: '富士 GFX100 II', model: '中画幅 · 1 亿像素，肤色更通透', r: 'pro', price: 300, st: { q: 34, m: 6 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody({ w: .152, h: .117, d: .1, gfx: true }) },
-  { id: 'body_x2d', cat: 'body', name: '哈苏 X2D 100C', model: '中画幅 · 哈苏自然色彩', r: 'top', price: 500, st: { q: 38, m: 10 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody({ w: .149, h: .106, d: .074, x2d: true, accent: M.orange }) },
+  { id: 'body_a74', cat: 'body', name: 'Sony A7 IV', model: '全画幅 · 3300 万像素', r: 'base', price: 0, st: { q: 12 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody('a74') },
+  { id: 'body_a7r5', cat: 'body', name: 'Sony A7R V', model: '高像素 · 6100 万，放大看细节', r: 'adv', price: 100, st: { q: 22 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody('a7r5') },
+  { id: 'body_gfx', cat: 'body', name: '富士 GFX100 II', model: '中画幅 · 1 亿像素，肤色更通透', r: 'pro', price: 300, st: { q: 34, m: 6 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody('gfx') },
+  { id: 'body_x2d', cat: 'body', name: '哈苏 X2D 100C', model: '中画幅 · 哈苏自然色彩', r: 'top', price: 500, st: { q: 38, m: 10 }, bone: 'RightHand', pos: 'cam', build: () => cameraBody('x2d') },
   // 镜头
   { id: 'lens_2470', cat: 'lens', name: '24-70mm F2.8 GM II', model: '万能变焦 · 装在机身上', r: 'base', price: 0, st: { q: 4, s: 2 }, locked: true, ref: 80 },
   { id: 'lens_85', cat: 'lens', name: '85mm F1.4 GM', model: '人像经典 · 背景虚化', r: 'adv', price: 50, st: { q: 4, m: 9 }, bone: 'Hips', pos: belt(1), build: () => lensHang(.107, .045), rec: '拍人像必备' },
@@ -648,12 +758,13 @@ const ITEMS = [
   { id: 'reflector', cat: 'light', name: '五合一反光板', model: '提亮肤色 · 标配赠送', r: 'base', price: 0, st: { l: 4 }, locked: true, ref: 20, pos: [-1.3, 0, .38], rot: [0, .9, 0],
     build: () => { const d = cyl(.4, .4, .006, M.gold, 48); d.rotation.set(Math.PI / 2 - .25, 0, 0); d.position.set(0, .4, 0); const rim = new THREE.Mesh(new THREE.TorusGeometry(.4, .008, 8, 48), M.black); rim.rotation.set(-.25, 0, 0); rim.position.copy(d.position); return grp(d, rim); } },
   { id: 'speedlight', cat: 'light', name: 'Godox V1 机顶闪光灯', model: '逆光、阴天补光', r: 'adv', price: 30, st: { l: 7 }, bone: 'RightHand', pos: 'flash', rec: '性价比最高',
-    build: () => grp(box(.06, .02, .05, M.black), box(.062, .072, .045, M.body, 0, .046, 0), at(cyl(.039, .039, .05, M.black), 0, .108, 0), at(new THREE.Mesh(new THREE.CircleGeometry(.036, 32), new THREE.MeshBasicMaterial({ color: 0xf4f1ea })), 0, .108, .026)) },
+    build: () => { const g = grp(box(.05, .012, .04, M.black), box(.064, .074, .046, M.black, 0, .046, 0), box(.05, .03, .004, M.screen, 0, .05, -.024), at(cyl(.04, .04, .052, M.black, 48), 0, .112, 0), at(new THREE.Mesh(new THREE.CircleGeometry(.036, 48), new THREE.MeshStandardMaterial({ color: 0xf4f1ea, emissive: 0xfff6ea, emissiveIntensity: .25, roughness: .3 })), 0, .112, .027)); const lb = label('GODOX', .03, .008); lb.position.set(0, .03, .0235); g.add(lb); return g; } },
   { id: 'ledstick', cat: 'light', name: 'LED 氛围灯棒', model: '夜景、室内加彩色氛围', r: 'adv', price: 40, st: { m: 8, l: 4 }, pos: [1.2, 0, -.6], rot: [0, face(1.2, -.6), 0],
     build: () => { const g = stand(1.2); const tube = cyl(.022, .022, 1.0, new THREE.MeshBasicMaterial({ color: 0xff9a5a }), 16); tube.position.set(0, 1.6, .03); g.add(tube); const L = new THREE.PointLight(0xff8a4a, 6, 4, 2); L.position.set(0, 1.5, .3); g.add(L); return g; } },
   { id: 'ad600', cat: 'light', name: 'Godox AD600 + 柔光箱', model: '外拍大灯 · 杂志感布光', r: 'pro', price: 120, st: { l: 20, m: 4 }, warn: '建议同时加选摄影助理', pos: [-1.75, 0, -1.05], rot: [0, face(-1.75, -1.05), 0],
     build: () => { const g = stand(1.75); const head = new THREE.Group(); head.position.y = 1.85; head.rotation.x = .38; g.add(head);
-      head.add(box(.11, .13, .16, M.body, 0, 0, -.12), at(fwd(cyl(.45, .06, .38, mat(0x111213, { side: THREE.DoubleSide, roughness: .95 }), 16, true)), 0, 0, .19));
+      head.add(box(.11, .14, .17, M.black, 0, 0, -.13), at(new THREE.Mesh(new THREE.TorusGeometry(.05, .008, 8, 24, Math.PI), M.black), 0, .07, -.13), at(fwd(cyl(.45, .06, .38, mat(0x111213, { roughness: .95, normalMap: weaveN, normalScale: N2(.5) }), 16, true)), 0, 0, .19), at(fwd(cyl(.445, .058, .378, phys(0xc8ccd2, { roughness: .35, metalness: .9, side: THREE.BackSide }), 16, true)), 0, 0, .19));
+      { const lb = label('GODOX', .07, .016); lb.position.set(.0555, 0, -.13); lb.rotation.y = Math.PI / 2; head.add(lb); }
       const fm = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6ea, emissiveIntensity: .35, side: THREE.DoubleSide }); head.add(at(new THREE.Mesh(new THREE.CircleGeometry(.45, 16), fm), 0, 0, .38));
       g.add(box(.2, .26, .12, M.body, .3, .13, .1)); const L = new THREE.PointLight(0xfff6ea, 0, 7, 2); L.position.set(0, 1.6, .7); g.add(L); g.userData.flash = { L, mat: fm, next: 2, v: 0 }; return g; } },
   { id: 'smoke', cat: 'light', name: '烟饼 · 仙气烟雾', model: '竹林、山水出丁达尔光', r: 'adv', price: 80, st: { m: 12 }, warn: '部分景区禁止使用，提前确认', pos: [0, 0, 0],
@@ -664,7 +775,7 @@ const ITEMS = [
   // 视频
   { id: 'fx3', cat: 'video', name: 'Sony FX3 电影机', model: '肩扛套件 · 电影感视频', r: 'pro', price: 399, st: { v: 24, m: 4 }, bone: 'Spine2', pos: [-.21, 1.56, .07], rot: [0, .06, 0], rec: '想要成片视频选它', build: () => cineCamera() },
   { id: 'gimbal', cat: 'video', name: 'DJI RS 4 Pro 稳定器', model: '运镜丝滑 · 1 分钟短片', r: 'pro', price: 299, st: { v: 18 }, pos: [-.5, 0, .3], rot: [0, .5, 0],
-    build: () => { const g = grp(rod(V(0, 0, 0), V(.12, .01, .06), .008, M.black), rod(V(0, 0, 0), V(-.1, .01, .08), .008, M.black), rod(V(0, 0, 0), V(0, .01, -.12), .008, M.black), at(cyl(.02, .02, .26, M.black), 0, .14, 0), at(cyl(.03, .03, .04, M.body), 0, .29, 0), box(.012, .14, .012, M.metal, .08, .36, 0), box(.09, .012, .012, M.metal, .04, .43, 0), at(cyl(.022, .022, .02, M.red, 16), .08, .3, 0)); const c = cameraBody(); c.scale.setScalar(.85); c.position.set(0, .38, 0); g.add(c); return g; } },
+    build: () => gimbalUnit() },
   { id: 'mic', cat: 'video', name: 'DJI Mic 2 无线麦', model: '采访、婚礼誓词收音清楚', r: 'adv', price: 59, st: { v: 5, s: 2 }, bone: 'Spine2', pos: [.075, 1.47, .125],
     build: () => grp(box(.04, .046, .02, mat(0x2b2c2e, { roughness: .4, metalness: .4 })), at(cyl(.012, .012, .006, M.metal, 20), 0, .006, .012, Math.PI / 2), box(.03, .02, .006, M.black, 0, .02, -.012)) },
   { id: 'pocket3', cat: 'video', name: 'DJI Osmo Pocket 3', model: '口袋云台 · 随手拍花絮', r: 'adv', price: 69, st: { v: 6 }, bone: 'Spine2', pos: [.12, 1.3, .145],
@@ -848,28 +959,58 @@ const stage = document.getElementById('stage'), canvas = document.getElementById
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-const BG = 0x2a2c2e; scene.background = new THREE.Color(BG); scene.fog = new THREE.Fog(BG, 6, 14);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), .04).texture;
+const BG = 0x1d1f22; scene.fog = new THREE.Fog(BG, 6, 14);
+{ // 背景渐变穹顶：中间略亮的地平线，四周压暗
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'varying vec3 vP; void main(){ float h = vP.y; vec3 top = vec3(.035,.038,.045), mid = vec3(.12,.125,.13), low = vec3(.06,.062,.066); vec3 c = h > 0. ? mix(mid, top, pow(h, .6)) : mix(mid, low, pow(-h, .5)); gl_FragColor = vec4(c, 1.); }' }));
+  scene.add(sky);
+}
+// 摄影棚环境光：顶部大柔光箱 + 两侧条灯 + 地面反光，金属和镜头玻璃上会出现真实的柔光箱高光
+function studioEnv() {
+  const s = new THREE.Scene(), add = (w, h, x, y, z, rx, ry, k, c = 0xffffff) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); s.add(m); };
+  s.add(new THREE.Mesh(new THREE.BoxGeometry(24, 12, 24), new THREE.MeshBasicMaterial({ color: 0x1a1c20, side: THREE.BackSide })));
+  add(7, 4, 0, 5.9, 0, Math.PI / 2, 0, 4.2, 0xfff4e8); add(2.2, 7, -11.8, 2, 3, 0, Math.PI / 2, 3, 0xd9e6ff); add(2.2, 7, 11.8, 2, -3, 0, -Math.PI / 2, 2.2, 0xffd9b0);
+  add(10, 2.5, 0, 1.5, -11.8, 0, 0, 1.1); add(24, 24, 0, -5.9, 0, -Math.PI / 2, 0, .22, 0x8f8478);
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(s, .03).texture; pm.dispose(); return t;
+}
+scene.environment = studioEnv(); scene.environmentIntensity = .9;
 const cam = new THREE.PerspectiveCamera(36, 1, .05, 60); cam.position.set(1.6, 1.5, 3.7);
 const controls = new OrbitControls(cam, canvas);
 controls.target.set(0, 1.0, 0); controls.enableDamping = true; controls.enablePan = false;
 controls.minDistance = 1.4; controls.maxDistance = 7; controls.maxPolarAngle = Math.PI * .5;
 controls.autoRotate = !reduce; controls.autoRotateSpeed = .5;
-scene.add(new THREE.HemisphereLight(0xdfe6ee, 0x3a3631, .55));
-const key = new THREE.DirectionalLight(0xfff1de, 2.4); key.position.set(2.5, 4.2, 3); key.castShadow = true;
+scene.add(new THREE.HemisphereLight(0xdfe6ee, 0x2e2a26, .32));
+const key = new THREE.DirectionalLight(0xfff1de, 2.2); key.position.set(2.5, 4.4, 3); key.castShadow = true;
+RectAreaLightUniformsLib.init();
+const softbox = new THREE.RectAreaLight(0xfff3e6, 5, 1.6, 1.1); softbox.position.set(1.9, 2.5, 2.3); softbox.lookAt(0, 1.15, 0); scene.add(softbox);   // 主光柔光箱：相机机身上的方形高光
+const rim = new THREE.SpotLight(0x9fc2ff, 38, 9, .55, 1, 2); rim.position.set(-1.6, 3.2, -2.4); rim.target.position.set(0, 1.2, 0); scene.add(rim, rim.target);   // 冷色轮廓光
 key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4;
 Object.assign(key.shadow.camera, { left: -4.2, right: 4.2, top: 4, bottom: -3.6, near: .5, far: 14 }); scene.add(key);
-const fill = new THREE.DirectionalLight(0xbcd0ff, .5); fill.position.set(-3, 2, -1.5); scene.add(fill);
+const fill = new THREE.DirectionalLight(0xbcd0ff, .35); fill.position.set(-3, 2, -1.5); scene.add(fill);
+// 体积光束 + 空气里的浮尘
+const shaft = new THREE.Mesh(new THREE.ConeGeometry(1.25, 4.6, 48, 1, true), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, uniforms: { uCol: { value: new THREE.Color(0xffe9cf) } },
+  vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = position.y / 4.6 + .5; vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: 'uniform vec3 uCol; varying float vY; varying vec3 vN; varying vec3 vV; void main(){ float e = pow(abs(dot(vN, vV)), 2.); float a = (1. - e) * .5 * pow(vY, 2.) * .09 + e * pow(vY, 2.4) * .05; gl_FragColor = vec4(uCol * a, a); }' }));
+shaft.position.set(0, 2.3, 0); scene.add(shaft);
+const DUST = 260, dustPos = new Float32Array(DUST * 3), dustSeed = [];
+for (let i = 0; i < DUST; i++) { const a = Math.random() * 7, r = Math.sqrt(Math.random()) * 1.4; dustSeed.push([a, r, Math.random() * 3.2, .02 + Math.random() * .05]); }
+const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size: .014, map: softTex, color: 0xfff1de, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(dust);
 
 const concrete = canvasTex(512, 512, (c, w, h) => { c.fillStyle = '#5b5c5c'; c.fillRect(0, 0, w, h); const img = c.getImageData(0, 0, w, h); for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - .5) * 26; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; } c.putImageData(img, 0, 0); c.globalAlpha = .08; for (let i = 0; i < 40; i++) { c.fillStyle = Math.random() > .5 ? '#000' : '#fff'; c.beginPath(); c.arc(Math.random() * w, Math.random() * h, 10 + Math.random() * 60, 0, 7); c.fill(); } c.globalAlpha = .2; c.strokeStyle = '#2c2d2d'; c.lineWidth = 2; c.strokeRect(0, 0, w, h); }, 8);
-const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), new THREE.MeshStandardMaterial({ map: concrete, roughness: .92, metalness: 0 }));
+const floorRough = canvasTex(256, 256, (c, w, h) => { const img = c.createImageData(w, h); for (let i = 0; i < img.data.length; i += 4) { const v = 150 + Math.random() * 70; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; } c.putImageData(img, 0, 0); c.globalAlpha = .25; for (let i = 0; i < 30; i++) { c.fillStyle = Math.random() > .5 ? '#555' : '#eee'; c.beginPath(); c.arc(Math.random() * w, Math.random() * h, 8 + Math.random() * 40, 0, 7); c.fill(); } }, 8); floorRough.colorSpace = THREE.NoColorSpace;
+const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), new THREE.MeshStandardMaterial({ map: concrete, color: 0x9a9a9a, roughness: 1, roughnessMap: floorRough, metalness: 0, envMapIntensity: .7 }));   // 打磨水泥地：有细微反光
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
 const matTex = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#1b1c1d'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < w; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, h); c.stroke(); } c.strokeStyle = 'rgba(242,169,0,.55)'; c.lineWidth = 4; c.strokeRect(6, 6, w - 12, h - 12); });
 const rugMat = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), new THREE.MeshStandardMaterial({ map: matTex, roughness: .95 }));
 rugMat.rotation.x = -Math.PI / 2; rugMat.position.y = .003; rugMat.receiveShadow = true; scene.add(rugMat);
+// 脚下的接触阴影（低画质没有环境光遮蔽时也有落地感）
+const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c, w) => { const g = c.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); }), transparent: true, depthWrite: false }));
+blob.rotation.x = -Math.PI / 2; blob.position.y = .006; scene.add(blob);
 
 // gear case
 const gearCase = new THREE.Group(); gearCase.position.set(-.95, 0, .82); gearCase.rotation.y = .55; scene.add(gearCase);
@@ -890,7 +1031,7 @@ function rotW(model, name, axis, ang) {
 }
 function prepPerson(m) {
   m.traverse(o => {
-    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; o.material = o.material.clone(); }
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; o.material = o.material.clone(); o.material.envMapIntensity = .8; }
     if (o.name === 'Wolf3D_Headwear' || o.name === 'Wolf3D_Beard') o.visible = false;
     if (o.isMesh && /Outfit_(Top|Bottom|Footwear)/.test(o.name)) { o.material.map = null; o.material.color.set(o.name.endsWith('Top') ? BLANK_LOOK.outfit : o.name.endsWith('Bottom') ? 0x25272b : 0x1a1a1a); }
   });
@@ -925,7 +1066,7 @@ const kick = V(0, 0, 0); let fovPunch = 0;
 function worldTarget(def) {
   if (def.pos === 'cam') return HAND.clone();
   if (def.pos === 'head') return bones.Head ? bones.Head.getWorldPosition(V(0, 0, 0)) : V(0, 1.64, 0);
-  if (def.pos === 'flash') { const top = { body_gfx: .094, body_x2d: .078 }[state.body] ?? .074; return HAND.clone().add(V(-.004, top * figScale, -.004)); }
+  if (def.pos === 'flash') { const top = { body_gfx: .058, body_x2d: .042 }[state.body] ?? .052; return HAND.clone().add(V(-.004, top * figScale, -.004)); }
   const p = V(...def.pos); return def.bone ? p.multiplyScalar(figScale) : p;
 }
 function buildItem(def) {
@@ -1016,7 +1157,44 @@ function updateItems(dt) {
     if (f && it.state === 'idle') { f.next -= dt; if (f.next <= 0) { f.v = 1; f.next = 3 + Math.random() * 4; } f.v = Math.max(0, f.v - dt * 7); f.L.intensity = f.v * 80; f.mat.emissiveIntensity = .35 + f.v * 2.5; }
   }
 }
-function resize() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.userData.baseFov = w / h < .8 ? 44 : w / h < 1.2 ? 38 : 32; cam.fov = cam.userData.baseFov; cam.updateProjectionMatrix(); }
+/* ---------- 画质：后期处理（环境光遮蔽、泛光、电影感调色）+ 自动分档 ---------- */
+const CineShader = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: .035 }, uVig: { value: .55 }, uCA: { value: .0016 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uGrain, uVig, uCA; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){ vec2 c = vUv - .5; float r = dot(c, c);
+      vec3 col = vec3(texture2D(tDiffuse, vUv - c * uCA * r * 10.).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv + c * uCA * r * 10.).b);
+      float l = dot(col, vec3(.299, .587, .114));
+      col = mix(col, col * vec3(.93, 1., 1.07), (1. - l) * .4); col = mix(col, col * vec3(1.06, 1., .93), l * .35);
+      col = (col - .5) * 1.06 + .5;
+      col *= mix(1., smoothstep(.62, .08, r), uVig);
+      col += (hash(vUv * 1000. + uTime) - .5) * uGrain;
+      gl_FragColor = vec4(col, 1.); }`,
+};
+const TIERS = { high: { label: '高', pr: 2, post: true, ao: true, shadow: 2048, fx: true }, mid: { label: '中', pr: 1.5, post: true, ao: false, shadow: 1024, fx: true }, low: { label: '低', pr: 1, post: false, ao: false, shadow: 1024, fx: false } };
+let tier = (() => { try { return localStorage.getItem('gear-tier'); } catch { return null; } })(), tierPinned = !!tier, composer = null, gtao = null, cinePass = null;
+if (!TIERS[tier]) tier = matchMedia('(pointer: coarse)').matches ? 'mid' : 'high';
+function setupPost() {
+  composer?.dispose?.(); composer = null; gtao = null; cinePass = null;
+  const T = TIERS[tier]; if (!T.post) return;
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, cam));
+  if (T.ao) { gtao = new GTAOPass(scene, cam, 1, 1); gtao.blendIntensity = .9; gtao.updateGtaoMaterial({ radius: .3, distanceExponent: 1.4, thickness: 1, scale: 1.1, samples: 12 }); gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 }); composer.addPass(gtao); }
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), .22, .35, 1.05));
+  composer.addPass(new OutputPass());
+  cinePass = new ShaderPass(CineShader); composer.addPass(cinePass);
+}
+function applyTier(t, why) {
+  tier = t; const T = TIERS[t];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, T.pr));
+  key.shadow.mapSize.set(T.shadow, T.shadow); key.shadow.map?.dispose(); key.shadow.map = null;
+  dust.visible = shaft.visible = T.fx; blob.material.opacity = T.ao ? .45 : 1;
+  setupPost(); resize();
+  const b = document.getElementById('qBtn'); if (b) b.textContent = '画质 ' + T.label;
+  if (why) toast(why);
+}
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); composer?.setSize(w, h); cam.aspect = w / h; cam.userData.baseFov = w / h < .8 ? 44 : w / h < 1.2 ? 38 : 32; cam.fov = cam.userData.baseFov; cam.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(stage); resize();
 
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let downAt = null;
@@ -1030,6 +1208,7 @@ function moveCam(mode) {
   camAnim = { s: now(), p0: cam.position.clone(), t0: controls.target.clone(), p1: ev ? V(4.4, 3.2, 6.5) : V(1.6, 1.5, 3.7), t1: ev ? V(0, .8, -.5) : V(0, 1, 0) };
   controls.maxDistance = ev ? 11 : 7; scene.fog.near = ev ? 9 : 6; scene.fog.far = ev ? 22 : 14;
 }
+const fpsProbe = { n: 0, sum: 0 };
 const clock = new THREE.Clock(), AX = V(1, 0, 0), AY = V(0, 1, 0), AZ = V(0, 0, 1);
 function loop() {
   const dt = Math.min(clock.getDelta(), .05); clockT += dt; const t = clockT;
@@ -1061,7 +1240,11 @@ function loop() {
     cam.position.add(kick); kick.multiplyScalar(-.55);
     fovPunch *= .82; cam.fov = cam.userData.baseFov - fovPunch; cam.updateProjectionMatrix();
   }
-  renderer.render(scene, cam); requestAnimationFrame(loop);
+  if (dust.visible) { for (let i = 0; i < DUST; i++) { const [a0, r, y0, sp] = dustSeed[i], a = a0 + t * .05, y = (y0 + t * sp) % 3.2; dustPos[i * 3] = Math.cos(a) * r + Math.sin(t * .3 + i) * .05; dustPos[i * 3 + 1] = y; dustPos[i * 3 + 2] = Math.sin(a) * r; } dustGeo.attributes.position.needsUpdate = true; }
+  if (composer) { cinePass.uniforms.uTime.value = t % 100; composer.render(); } else renderer.render(scene, cam);
+  // 前几秒测帧率，太卡就自动降一档画质
+  if (started && !tierPinned && fpsProbe.n < 240) { fpsProbe.n++; fpsProbe.sum += dt; if (fpsProbe.n === 150) { const fps = 150 / fpsProbe.sum; if (fps < 32 && tier !== 'low') { applyTier(tier === 'high' ? 'mid' : 'low', `已自动切到${TIERS[tier === 'high' ? 'mid' : 'low'].label}画质，保证流畅`); fpsProbe.n = 0; fpsProbe.sum = 0; } } }
+  requestAnimationFrame(loop);
 }
 
 /* ---------- thumbnails rendered from the real models ---------- */
@@ -1478,7 +1661,7 @@ function poster() {
   const deliv = isEv ? evDeliverables() : deliverables(P);
   const C = document.createElement('canvas'); C.width = 1080; C.height = 1560; const x = C.getContext('2d');
   x.fillStyle = '#0f1011'; x.fillRect(0, 0, 1080, 1560);
-  renderer.render(scene, cam); const src = renderer.domElement, ar = 1080 / 900; let cw = src.width, ch = cw / ar; if (ch > src.height) { ch = src.height; cw = ch * ar; }
+  if (composer) composer.render(); else renderer.render(scene, cam); const src = renderer.domElement, ar = 1080 / 900; let cw = src.width, ch = cw / ar; if (ch > src.height) { ch = src.height; cw = ch * ar; }
   x.drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 110, 1080, 900);
   x.fillStyle = '#f2a900'; x.font = '700 34px "Barlow Condensed", sans-serif'; x.fillText(BRAND, 56, 70);
   x.fillStyle = '#e8e5dc'; x.font = '900 34px "Noto Sans SC", sans-serif'; x.textAlign = 'right'; x.fillText(`${CITY} · 摄影师装备舱`, 1024, 70); x.textAlign = 'left';
@@ -1686,6 +1869,10 @@ function drawEvent(cv, mini) {
   if (q('ev_photo') && !mini) { ctx.fillStyle = 'rgba(15,16,17,.82)'; ctx.fillRect(12 * k, H * .5, 170 * k, 22 * k); ctx.fillStyle = '#8db96f'; ctx.font = `600 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText(`照片直播 · 已上传 ${(q('ev_photo') * 643).toLocaleString('zh-CN')} 张`, 18 * k, H * .5 + 11 * k); }
   ctx.textBaseline = 'alphabetic';
 }
+
+/* ---------- 画质开关 ---------- */
+$('qBtn').onclick = () => { const order = ['high', 'mid', 'low'], next = order[(order.indexOf(tier) + 1) % 3]; tierPinned = true; try { localStorage.setItem('gear-tier', next); } catch {} applyTier(next, `画质：${TIERS[next].label}`); Snd.tap(); };
+applyTier(tier);
 
 /* ---------- 声音开关 ---------- */
 const syncSoundBtns = () => { $('sfxBtn').setAttribute('aria-pressed', Snd.sfxOn); $('musicBtn').setAttribute('aria-pressed', Snd.musicOn); };
