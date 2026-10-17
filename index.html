@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>摄影师装备舱</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&family=Chakra+Petch:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: game loadout screen. Gear rack (left) · 3D stage with the photographer (center) · rank, sample shot and quote (right). Stacks to one column on phones. */
+:root {
+  --bg: #0a0c1c;
+  --panel: #11142b;
+  --panel-2: #181c3a;
+  --line: #262b52;
+  --fg: #eceaf7;
+  --muted: #8d91b8;
+  --accent: #ffb627;      /* legendary gold, the one loud colour */
+  --accent-ink: #1b1300;
+  --r-n: #9aa6bf;         /* 普通 */
+  --r-r: #4fa3ff;         /* 稀有 */
+  --r-sr: #b77bff;        /* 史诗 */
+  --r-ssr: #ffb627;       /* 传说 */
+  --good: #48d597;
+  --f-display: "ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-num: "Chakra Petch", "DIN Alternate", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--f-body); font-size: 14px; line-height: 1.5; margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 372px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  gap: 0;
+}
+@media (min-width: 1101px) { html, body { height: 100%; overflow: hidden; } }
+
+/* ---------- top bar ---------- */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand b { font-family: var(--f-num); font-weight: 700; letter-spacing: .18em; font-size: 13px; color: var(--accent); }
+.brand h1 { font-family: var(--f-display); font-weight: 400; font-size: 26px; margin: 0; letter-spacing: .04em; }
+.top-total { margin-left: auto; display: flex; align-items: baseline; gap: 10px; }
+.top-total span { color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+.top-total strong { font-family: var(--f-num); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+/* ---------- panels ---------- */
+.panel { background: var(--panel); overflow-y: auto; min-width: 0; }
+.panel.left { border-right: 1px solid var(--line); }
+.panel.right { border-left: 1px solid var(--line); }
+.panel-inner { display: flex; flex-direction: column; gap: 14px; padding-block: 14px; padding-inline: 14px; }
+.eyebrow { font-size: 11px; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
+.sec-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sec-title h2 { font-family: var(--f-display); font-weight: 400; font-size: 20px; margin: 0; letter-spacing: .04em; }
+.sec-title small { color: var(--muted); font-size: 12px; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 11px; font-size: 12px; color: var(--muted); }
+.tab[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+.cat { display: flex; flex-direction: column; gap: 8px; }
+.cat-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; padding-top: 4px; }
+.cat-head em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 12px; }
+.card {
+  --rc: var(--r-n);
+  display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  text-align: left; width: 100%;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 10px 7px 7px; position: relative;
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+}
+.card:hover { border-color: var(--rc); transform: translateX(2px); }
+.card[data-r="R"] { --rc: var(--r-r); } .card[data-r="SR"] { --rc: var(--r-sr); } .card[data-r="SSR"] { --rc: var(--r-ssr); }
+.card[aria-pressed="true"] { border-color: var(--rc); box-shadow: 0 0 0 1px var(--rc) inset, 0 0 18px -6px var(--rc); background: color-mix(in srgb, var(--rc) 10%, var(--panel-2)); }
+.thumb { width: 58px; height: 58px; border-radius: 8px; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rc) 30%, transparent), transparent 70%), var(--bg); display: grid; place-items: center; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; }
+.card-name { font-weight: 700; font-size: 13.5px; line-height: 1.3; }
+.card-model { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.rar { display: inline-block; font-family: var(--f-num); font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--rc); border: 1px solid var(--rc); border-radius: 4px; padding: 0 4px; margin-right: 6px; vertical-align: 1px; }
+.card-price { font-family: var(--f-num); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; text-align: right; white-space: nowrap; }
+.card-price small { display: block; font-size: 10.5px; color: var(--muted); font-family: var(--f-body); font-weight: 400; }
+.card[aria-pressed="true"] .card-price small { color: var(--rc); }
+
+/* ---------- stage ---------- */
+.stage { position: relative; min-width: 0; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #1c2050 0%, var(--bg) 70%); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hud { position: absolute; pointer-events: none; inset: 0; }
+.hud-top { position: absolute; top: 12px; left: 14px; right: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.power { font-family: var(--f-num); }
+.power span { display: block; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
+.power strong { font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 24px color-mix(in srgb, var(--tier, var(--accent)) 60%, transparent); color: var(--tier, var(--fg)); }
+.count { text-align: right; font-family: var(--f-num); }
+.count span { display: block; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
+.count strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.hint { position: absolute; left: 14px; top: 78px; font-size: 12px; color: var(--muted); max-width: 260px; }
+.presets { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; pointer-events: auto; width: max-content; max-width: calc(100% - 24px); }
+.presets button { background: color-mix(in srgb, var(--panel) 80%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.presets button:hover { border-color: var(--fg); }
+.presets .max { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.presets .gacha { border-color: var(--r-sr); color: var(--r-sr); }
+.float { position: absolute; font-family: var(--f-num); font-weight: 700; font-size: 18px; pointer-events: none; transform: translate(-50%, -50%); text-shadow: 0 2px 8px rgba(0,0,0,.6); animation: rise 1.3s ease-out forwards; white-space: nowrap; }
+.float small { display: block; font-family: var(--f-body); font-size: 11px; font-weight: 500; text-align: center; opacity: .9; }
+@keyframes rise { 0% { opacity: 0; margin-top: 10px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -70px; } }
+.banner { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -50%) scale(.6); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .5s cubic-bezier(.2,1.6,.4,1); }
+.banner.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.banner b { display: block; font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 5vw, 54px); color: var(--accent); text-shadow: 0 0 30px rgba(255,182,39,.7), 0 4px 0 #6a4300; letter-spacing: .08em; white-space: nowrap; }
+.banner span { font-size: 15px; letter-spacing: .3em; color: var(--fg); }
+
+/* ---------- right panel ---------- */
+.tier { display: grid; grid-template-columns: 64px minmax(0,1fr); gap: 12px; align-items: center; }
+.emblem { width: 64px; height: 72px; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(160deg, var(--tier, var(--muted)), color-mix(in srgb, var(--tier, var(--muted)) 35%, var(--bg))); display: grid; place-items: center; font-family: var(--f-display); font-size: 22px; color: var(--bg); }
+.tier-name { font-family: var(--f-display); font-size: 26px; line-height: 1.1; color: var(--tier, var(--fg)); }
+.tier-sub { color: var(--muted); font-size: 12.5px; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--tier, var(--accent)); transition: width .5s; }
+.radar-wrap { display: grid; place-items: center; }
+#radar { width: 100%; max-width: 320px; aspect-ratio: 32 / 25; }
+
+.sample { display: flex; flex-direction: column; gap: 8px; }
+.sample-frame { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+#sample { display: block; width: 100%; aspect-ratio: 16 / 10; max-width: 100%; transition: filter .35s; }
+#sample.dev { filter: brightness(1.8) blur(4px) saturate(0); }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tags span { font-size: 12px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 4px; padding: 1px 7px; }
+.tags span.hi { border-color: var(--accent); color: var(--accent); }
+.deliv { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.deliv li { display: flex; gap: 8px; }
+.deliv li::before { content: ""; width: 6px; height: 6px; margin-top: 7px; flex: none; background: var(--good); transform: rotate(45deg); }
+
+.quote { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.qrow { display: flex; justify-content: space-between; gap: 10px; }
+.qrow span:first-child { min-width: 0; color: var(--muted); }
+.qrow span:last-child { font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qrow.base span:first-child { color: var(--fg); }
+.qrow.total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; font-weight: 700; }
+.qrow.total span:last-child { color: var(--accent); font-size: 20px; }
+.qnote { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.actions button { border-radius: 8px; padding: 9px 10px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 500; }
+.actions .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 13px; z-index: 30; }
+
+.modal { position: fixed; inset: 0; z-index: 20; background: rgba(5,6,15,.82); display: grid; place-items: center; padding-block: 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; max-width: 460px; width: 100%; max-height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal-box img { width: 100%; border-radius: 6px; display: block; }
+.modal-box p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.modal-box textarea { width: 100%; min-height: 220px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 12.5px/1.6 var(--f-body); resize: vertical; }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: minmax(0,1fr); grid-template-rows: auto; height: auto; }
+  .stage { height: min(66vh, 600px); min-height: 400px; order: 1; }
+  .topbar { order: 0; }
+  .panel.left { order: 2; border-right: 0; border-top: 1px solid var(--line); }
+  .panel.right { order: 3; border-left: 0; border-top: 1px solid var(--line); }
+  .panel { overflow: visible; }
+  .panel-inner { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .hint { display: none; }
+}
+@media (max-width: 520px) {
+  .brand h1 { font-size: 21px; }
+  .top-total strong { font-size: 22px; }
+  .power strong { font-size: 30px; }
+  .presets button { padding: 5px 9px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .float { animation-duration: .01s; }
+  .card, .banner, .bar i { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><b id="brandName">XIN STUDIO</b><h1>摄影师装备舱</h1></div>
+    <div class="top-total"><span>当前配置报价</span><strong id="topTotal">¥0</strong></div>
+  </header>
+
+  <aside class="panel left" aria-label="装备库">
+    <div class="panel-inner">
+      <div class="sec-title"><h2>装备库</h2><small>点一下，装到摄影师身上</small></div>
+      <div class="tabs" id="tabs" role="toolbar" aria-label="装备分类"></div>
+      <div id="gearList" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <canvas id="three" aria-label="3D 摄影师与装备"></canvas>
+    <div class="hud" id="hud">
+      <div class="hud-top">
+        <div class="power"><span>战力 POWER</span><strong id="power">0</strong></div>
+        <div class="count"><span>已装备</span><strong id="count">0 / 0</strong></div>
+      </div>
+      <div class="hint">拖动旋转视角，滚轮缩放。点击左下角的装备箱，随机开出一件装备。</div>
+      <div class="banner" id="banner"><b>全副武装</b><span>人形移动摄影棚</span></div>
+      <div class="presets" id="presets">
+        <button type="button" data-preset="light">轻装出行</button>
+        <button type="button" data-preset="pro">专业标配</button>
+        <button type="button" data-preset="flag">旗舰全案</button>
+        <button type="button" class="max" data-preset="max">一键满配</button>
+        <button type="button" class="gacha" data-preset="gacha">开箱抽一件</button>
+        <button type="button" data-preset="clear">卸下全部</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel right" aria-label="配置结果">
+    <div class="panel-inner">
+      <div class="tier" id="tierBox">
+        <div class="emblem" id="emblem">空</div>
+        <div style="min-width:0">
+          <div class="eyebrow">摄影师段位</div>
+          <div class="tier-name" id="tierName">空白模特</div>
+          <div class="tier-sub" id="tierSub">还没带装备</div>
+          <div class="bar"><i id="tierBar"></i></div>
+        </div>
+      </div>
+
+      <div class="radar-wrap"><canvas id="radar" width="640" height="500" aria-label="六维能力图"></canvas></div>
+
+      <section class="sample">
+        <div class="sec-title"><h2>这套配置出的片子</h2><small>示意效果</small></div>
+        <div class="sample-frame"><canvas id="sample" width="640" height="400" aria-label="样片示意"></canvas></div>
+        <div class="tags" id="tags"></div>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <div class="sec-title"><h2>你会拿到</h2></div>
+        <ul class="deliv" id="deliv"></ul>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <div class="sec-title"><h2>报价单</h2><small id="itemCount"></small></div>
+        <div class="quote" id="quote"></div>
+        <div class="actions">
+          <button type="button" class="primary" id="posterBtn">生成战绩海报</button>
+          <button type="button" id="copyBtn">复制报价单</button>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="sec-title"><h2 id="modalTitle">战绩海报</h2><button type="button" id="modalClose" class="tab">关闭</button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =====================================================================
+   配置区：品牌、基础价、装备价格都在这里改
+   ===================================================================== */
+const BRAND = 'XIN STUDIO';
+const BASE = { name: '摄影师基础出勤（半天 4 小时）', price: 2999 };
+const RAR = { N: { label: '普通', color: '#9aa6bf' }, R: { label: '稀有', color: '#4fa3ff' }, SR: { label: '史诗', color: '#b77bff' }, SSR: { label: '传说', color: '#ffb627' } };
+const STAT_KEYS = [['q', '画质'], ['l', '光影'], ['m', '氛围'], ['v', '动态'], ['a', '视角'], ['s', '服务']];
+const CATS = [
+  { id: 'body', name: '主力机身', note: '四选一' },
+  { id: 'lens', name: '镜头群', note: '挂在腰带上' },
+  { id: 'video', name: '视频机位', note: '' },
+  { id: 'light', name: '灯光', note: '围在四周' },
+  { id: 'aerial', name: '航拍', note: '头顶盘旋' },
+  { id: 'support', name: '支撑收纳', note: '' },
+  { id: 'team', name: '团队与服务', note: '' },
+];
+
+/* ---------- 3D helpers ---------- */
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .45, metalness: .3, ...o });
+const M = {
+  dark: mat(0x1d2028, { metalness: .6, roughness: .35 }),
+  black: mat(0x0d0e12, { metalness: .4, roughness: .5 }),
+  grey: mat(0x5a6070, { metalness: .6 }),
+  silver: mat(0xc9ced8, { metalness: .9, roughness: .25 }),
+  white: mat(0xeceff3, { metalness: .1, roughness: .45 }),
+  red: mat(0xd62828, { metalness: .3 }),
+  orange: mat(0xff6a00, { emissive: 0x401800 }),
+  gold: mat(0xffb627, { metalness: .85, roughness: .3 }),
+  goldGlow: new THREE.MeshStandardMaterial({ color: 0xffb627, emissive: 0xffa000, emissiveIntensity: 1.6 }),
+  glass: mat(0x1a3a5a, { metalness: .9, roughness: .05, emissive: 0x0a2a4a }),
+  olive: mat(0x40472f, { metalness: .05, roughness: .9 }),
+  fabric: mat(0x2b2f3a, { metalness: .05, roughness: .9 }),
+  pink: mat(0xff8fb3, { metalness: .2 }),
+};
+function box(w, h, d, m, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; return o; }
+function cyl(rt, rb, h, m, seg = 24, open = false) { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg, 1, open), m); o.castShadow = true; return o; }
+function sph(r, m) { const o = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), m); o.castShadow = true; return o; }
+function limb(a, b, r, m) {
+  const d = new THREE.Vector3().subVectors(b, a); const len = d.length();
+  const o = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(.001, len), 6, 12), m);
+  o.position.copy(a).addScaledVector(d, .5);
+  o.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize()); o.castShadow = true; return o;
+}
+function grp(...c) { const g = new THREE.Group(); c.forEach(x => g.add(x)); return g; }
+function at(o, x, y, z, rx = 0, ry = 0, rz = 0) { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); return o; }
+function fwd(o) { o.rotation.x = Math.PI / 2; return o; }      // cylinder axis → +z
+const face = (x, z) => Math.atan2(-x, -z);                   // rotation.y so +z looks at origin
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function plane(w, h, map, o = {}) { return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map, transparent: true, side: THREE.DoubleSide, toneMapped: false, ...o })); }
+
+/* ---------- builders ---------- */
+function camera({ w = .14, h = .095, d = .07, body = M.dark, lensL = .09, lensR = .036, lensMat = M.black, ring = null } = {}) {
+  const g = grp(box(w, h, d, body), box(.035, h * 1.05, d * 1.25, M.black, w / 2 - .02, -.003, .01), box(.05, .03, .05, body, -.01, h / 2 + .013, 0));
+  g.add(at(fwd(cyl(lensR, lensR, lensL, lensMat)), -.01, 0, d / 2 + lensL / 2));
+  if (ring) g.add(at(fwd(cyl(lensR * 1.04, lensR * 1.04, .01, ring)), -.01, 0, d / 2 + lensL * .82));
+  g.add(at(fwd(cyl(lensR * .8, lensR * .8, .004, M.glass)), -.01, 0, d / 2 + lensL + .002));
+  return g;
+}
+function lensItem(len, r, body = M.black, ring = null, hood = false, bulb = false) {
+  const g = new THREE.Group();
+  g.add(at(cyl(r * .8, r * .85, .02, M.grey), 0, -.01, 0));
+  g.add(at(cyl(r, r, len, body), 0, -len / 2 - .02, 0));
+  if (ring) g.add(at(cyl(r * 1.04, r * 1.04, .012, ring), 0, -len * .35 - .02, 0));
+  if (hood) g.add(at(cyl(r * 1.08, r * 1.3, len * .3, M.black, 24, true), 0, -len - .02 - len * .15, 0));
+  if (bulb) { const s = sph(r * .9, M.glass); s.position.y = -len - .02; s.scale.y = .6; g.add(s); }
+  else g.add(at(cyl(r * .85, r * .85, .004, M.glass), 0, -len - .022, 0));
+  return g;
+}
+function mannequin(color = 0xdfe3ec) {
+  const m = mat(color, { metalness: .05, roughness: .6 });
+  const j = mat(new THREE.Color(color).multiplyScalar(.72), { metalness: .15, roughness: .5 });
+  const g = new THREE.Group();
+  const head = sph(.11, m); head.position.set(0, 1.66, 0); head.scale.set(.9, 1.06, .95); g.add(head);
+  g.add(limb(V(0, 1.48, 0), V(0, 1.56, 0), .045, j));
+  const torso = limb(V(0, 1.08, 0), V(0, 1.33, 0), .15, m); torso.scale.set(1.2, 1, .72); g.add(torso);
+  const hips = sph(.15, m); hips.position.set(0, .97, 0); hips.scale.set(1.15, .75, .8); g.add(hips);
+  for (const s of [-1, 1]) {
+    const hip = V(.09 * s, .92, 0), knee = V(.1 * s, .5, .03), ank = V(.11 * s, .1, 0);
+    g.add(limb(hip, knee, .065, m), limb(knee, ank, .055, m), at(sph(.06, j), knee.x, knee.y, knee.z), box(.1, .06, .22, j, .11 * s, .03, .04));
+    const S = V(.21 * s, 1.4, 0), E = s > 0 ? V(.29, 1.17, .1) : V(-.29, 1.14, .08), H = s > 0 ? V(.16, 1.2, .33) : V(-.2, 1.12, .3);
+    g.add(limb(S, E, .045, m), limb(E, H, .04, m), at(sph(.055, j), S.x, S.y, S.z), at(sph(.045, j), E.x, E.y, E.z), at(sph(.045, j), H.x, H.y, H.z));
+  }
+  return g;
+}
+function stand(h) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3 + .5; g.add(limb(V(0, .38, 0), V(Math.cos(a) * .34, .01, Math.sin(a) * .34), .012, M.dark)); }
+  g.add(at(cyl(.016, .016, h, M.silver), 0, h / 2, 0));
+  return g;
+}
+function flashable(g, color, power) {
+  const L = new THREE.PointLight(color, 0, 6, 2); g.add(L);
+  g.userData.flash = { L, power, next: 1 + Math.random() * 3, v: 0 };
+  return L;
+}
+function drone(s, bodyMat, kind) {
+  const g = new THREE.Group(); const rotors = [];
+  g.add(box(.16 * s, .05 * s, .22 * s, bodyMat));
+  const n = kind === 'inspire' ? 4 : 4;
+  for (let i = 0; i < n; i++) {
+    const a = Math.PI / 4 + i * Math.PI / 2;
+    const tip = V(Math.cos(a) * .2 * s, kind === 'inspire' ? .06 * s : 0, Math.sin(a) * .2 * s);
+    g.add(limb(V(0, 0, 0), tip, .012 * s, M.dark));
+    g.add(at(cyl(.02 * s, .02 * s, .03 * s, M.black), tip.x, tip.y + .02 * s, tip.z));
+    const r = cyl(.09 * s, .09 * s, .003, new THREE.MeshStandardMaterial({ color: 0x9aa6bf, transparent: true, opacity: .45 }), 6);
+    r.position.set(tip.x, tip.y + .04 * s, tip.z); g.add(r); rotors.push(r);
+    r.add(box(.17 * s, .002, .015 * s, M.black));
+  }
+  if (kind === 'inspire') for (const sx of [-1, 1]) g.add(limb(V(.05 * s * sx, 0, 0), V(.09 * s * sx, -.12 * s, 0), .008 * s, M.dark), at(box(.012 * s, .01 * s, .2 * s, M.dark), .09 * s * sx, -.12 * s, 0));
+  g.add(at(sph(.03 * s, M.black), 0, -.04 * s, .1 * s), at(fwd(cyl(.015 * s, .015 * s, .02 * s, M.glass)), 0, -.04 * s, .13 * s));
+  g.userData.rotors = rotors;
+  return g;
+}
+const texScreen = () => canvasTex(256, 160, (c, w, h) => {
+  c.fillStyle = '#081420'; c.fillRect(0, 0, w, h);
+  const gr = c.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#1f4a7a'); gr.addColorStop(1, '#e0874a');
+  c.fillStyle = gr; c.fillRect(10, 10, w - 20, h - 20);
+  c.fillStyle = '#ff3b3b'; c.beginPath(); c.arc(28, 28, 7, 0, 7); c.fill();
+  c.fillStyle = '#fff'; c.font = 'bold 18px sans-serif'; c.fillText('REC', 40, 34); c.fillText('4K 25P', w - 86, 34);
+  c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 2; c.beginPath();
+  for (let x = 0; x < 80; x++) c.lineTo(w - 100 + x, h - 20 - Math.abs(Math.sin(x * .2)) * 30 * Math.random()); c.stroke();
+});
+const texRetouch = () => canvasTex(256, 168, (c, w, h) => {
+  c.fillStyle = 'rgba(10,30,50,.75)'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#5f6670'; c.fillRect(8, 24, w / 2 - 12, h - 32);
+  const g = c.createLinearGradient(w / 2, 0, w, h); g.addColorStop(0, '#ffd1b0'); g.addColorStop(1, '#ff8a5c');
+  c.fillStyle = g; c.fillRect(w / 2 + 4, 24, w / 2 - 12, h - 32);
+  for (const [x, col] of [[w / 4, '#3d434b'], [w * .75, '#fff3e6']]) { c.fillStyle = col; c.beginPath(); c.arc(x, h * .55, 26, 0, 7); c.fill(); }
+  c.fillStyle = '#5fd3ff'; c.font = 'bold 16px sans-serif'; c.fillText('RAW', 12, 18); c.fillText('精修', w / 2 + 8, 18);
+  c.strokeStyle = '#5fd3ff'; c.lineWidth = 3; c.strokeRect(2, 2, w - 4, h - 4);
+});
+const texGrade = () => canvasTex(320, 200, (c, w, h) => {
+  c.fillStyle = '#111'; c.fillRect(0, 0, w, h);
+  [60, 160, 260].forEach((x, i) => {
+    const g = c.createConicGradient(0, x, 95); ['#f00', '#ff0', '#0f0', '#0ff', '#00f', '#f0f', '#f00'].forEach((col, k) => g.addColorStop(k / 6, col));
+    c.fillStyle = g; c.beginPath(); c.arc(x, 95, 40, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(x + [8, -6, 10][i], 95 + [-6, 8, 4][i], 6, 0, 7); c.fill();
+  });
+  c.fillStyle = '#ffb627'; c.font = 'bold 20px sans-serif'; c.fillText('LIFT  GAMMA  GAIN', 52, 170);
+});
+const texClap = () => canvasTex(256, 180, (c, w, h) => {
+  c.fillStyle = '#111'; c.fillRect(0, 0, w, h); c.strokeStyle = '#fff'; c.lineWidth = 2;
+  c.strokeRect(8, 8, w - 16, h - 16); c.beginPath(); c.moveTo(8, 90); c.lineTo(w - 8, 90); c.moveTo(w / 2, 90); c.lineTo(w / 2, h - 8); c.stroke();
+  c.fillStyle = '#fff'; c.font = 'bold 22px sans-serif'; c.fillText('XIN STUDIO', 20, 40); c.font = '18px sans-serif'; c.fillText('SCENE 01', 20, 125); c.fillText('TAKE 1', w / 2 + 12, 125);
+  c.fillText('DIR. 创意导演', 20, 72);
+});
+const texStripes = () => canvasTex(256, 32, (c, w, h) => { for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? '#fff' : '#111'; c.beginPath(); c.moveTo(i * 32, 0); c.lineTo(i * 32 + 32, 0); c.lineTo(i * 32 + 16, h); c.lineTo(i * 32 - 16, h); c.fill(); } });
+const texSoft = () => canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+
+/* ---------- gear catalogue ---------- */
+const HAND_R = [.16, 1.22, .37], HAND_L = [-.2, 1.13, .34];
+const BELT = [[.21, .97, .07], [.23, .97, -.07], [.12, .97, -.16], [-.12, .97, -.16], [-.23, .97, -.07], [-.21, .97, .07]];
+const GEAR = [
+  // 主力机身
+  { id: 'body_ff', cat: 'body', name: '全画幅高像素', model: 'Sony α7R V · 6100 万像素', r: 'R', price: 800, st: { q: 30 }, parent: 'fig', pos: HAND_R, rot: [0, -.25, 0], build: () => camera() },
+  { id: 'body_flag', cat: 'body', name: '旗舰速度机', model: 'Canon EOS R1 · 40 张/秒连拍', r: 'SR', price: 1500, st: { q: 35, v: 8, s: 5 }, parent: 'fig', pos: HAND_R, rot: [0, -.25, 0],
+    build: () => { const g = camera({ w: .155, h: .12, d: .085, lensL: .11, lensR: .042, ring: M.red }); g.add(box(.155, .04, .085, M.dark, 0, -.078, 0)); return g; } },
+  { id: 'body_mf', cat: 'body', name: '中画幅', model: 'Hasselblad X2D 100C · 1 亿像素', r: 'SSR', price: 2800, st: { q: 55, m: 10 }, parent: 'fig', pos: HAND_R, rot: [0, -.25, 0],
+    build: () => { const g = grp(box(.15, .1, .075, M.silver), box(.04, .106, .09, M.black, .058, 0, .008), box(.014, .012, .014, M.orange, .045, .057, .01)); g.add(at(fwd(cyl(.048, .044, .11, M.black)), -.015, 0, .09), at(fwd(cyl(.05, .05, .012, M.silver)), -.015, 0, .07), at(fwd(cyl(.04, .04, .004, M.glass)), -.015, 0, .147)); return g; } },
+  { id: 'body_pone', cat: 'body', name: '顶级数码后背', model: 'Phase One XT · IQ4 1.5 亿像素', r: 'SSR', price: 5800, st: { q: 70, m: 12 }, parent: 'fig', pos: HAND_R, rot: [0, -.25, 0],
+    build: () => { const g = grp(box(.17, .16, .1, M.black), box(.18, .18, .05, M.grey, 0, 0, -.07), box(.13, .1, .004, M.glass, 0, .01, -.097), box(.03, .17, .11, M.dark, .1, 0, 0), box(.12, .025, .03, M.silver, 0, .095, 0)); g.add(at(fwd(cyl(.055, .055, .15, M.black)), -.01, 0, .125), at(fwd(cyl(.058, .058, .015, M.silver)), -.01, 0, .07), at(fwd(cyl(.045, .045, .004, M.glass)), -.01, 0, .202)); return g; } },
+  // 镜头
+  { id: 'lens_2470', cat: 'lens', name: '24-70mm F2.8', model: '万能标准变焦', r: 'N', price: 300, st: { q: 5, s: 3 }, parent: 'fig', pos: BELT[0], build: () => lensItem(.12, .042, M.black, M.red) },
+  { id: 'lens_85', cat: 'lens', name: '85mm F1.2', model: '人像焦外之王 · 奶油虚化', r: 'SR', price: 800, st: { q: 8, m: 15 }, parent: 'fig', pos: BELT[1], build: () => lensItem(.095, .048, M.black, M.gold) },
+  { id: 'lens_50', cat: 'lens', name: '50mm F1.0', model: '夜景暗光神器', r: 'SR', price: 900, st: { l: 6, m: 14 }, parent: 'fig', pos: BELT[5], build: () => lensItem(.085, .046, M.dark, M.red) },
+  { id: 'lens_70200', cat: 'lens', name: '70-200mm F2.8', model: '远摄抓拍 · 压缩背景', r: 'R', price: 600, st: { q: 6, m: 5, a: 4 }, parent: 'fig', pos: BELT[2], build: () => lensItem(.2, .042, M.white, M.red, true) },
+  { id: 'lens_1424', cat: 'lens', name: '14-24mm F2.8', model: '超广角 · 大场景', r: 'R', price: 500, st: { a: 10, m: 4 }, parent: 'fig', pos: BELT[3], build: () => lensItem(.13, .046, M.black, M.gold, false, true) },
+  { id: 'lens_100', cat: 'lens', name: '100mm 微距', model: '婚戒、细节特写', r: 'R', price: 400, st: { q: 8 }, parent: 'fig', pos: BELT[4], build: () => lensItem(.12, .036, M.dark, M.red) },
+  // 视频
+  { id: 'cine_fx3', cat: 'video', name: 'Sony FX3 电影机', model: '第二机位 · 4K 花絮', r: 'SR', price: 1800, st: { v: 30, m: 5 }, parent: 'fig', pos: HAND_L, rot: [0, .2, 0],
+    build: () => { const g = grp(box(.13, .08, .09, M.dark), box(.008, .1, .1, M.grey, -.07, 0, 0), box(.008, .1, .1, M.grey, .07, 0, 0), box(.15, .008, .1, M.grey, 0, .054, 0), box(.012, .04, .012, M.grey, 0, .075, -.03), box(.012, .04, .012, M.grey, 0, .075, .04), box(.014, .014, .11, M.black, 0, .1, .005)); const mon = box(.1, .065, .012, M.black, -.04, .135, .02); g.add(mon, at(plane(.088, .055, texScreen()), -.04, .135, .027)); g.add(at(fwd(cyl(.042, .042, .1, M.black)), 0, 0, .095), at(fwd(cyl(.034, .034, .004, M.glass)), 0, 0, .146)); return g; } },
+  { id: 'cine_red', cat: 'video', name: 'RED V-Raptor', model: '8K 电影级 MV · 肩扛', r: 'SSR', price: 4800, st: { v: 50, m: 12, q: 5 }, parent: 'fig', pos: [-.24, 1.58, .06], rot: [0, .05, 0], scale: 1.25,
+    build: () => { const g = grp(box(.17, .14, .2, M.black), box(.004, .08, .12, M.red, .087, 0, 0), box(.004, .08, .12, M.red, -.087, 0, 0), box(.06, .03, .18, M.fabric, 0, -.085, -.02), box(.014, .05, .014, M.grey, 0, .095, -.06), box(.014, .05, .014, M.grey, 0, .095, .06), box(.016, .016, .2, M.black, 0, .125, 0)); g.add(at(fwd(cyl(.052, .052, .13, M.black)), 0, 0, .165), at(fwd(cyl(.044, .044, .004, M.glass)), 0, 0, .232)); for (const [w, h, x, y] of [[.22, .012, 0, .085], [.22, .012, 0, -.085], [.012, .18, .105, 0], [.012, .18, -.105, 0]]) g.add(box(w, h, .07, M.dark, x, y, .26)); g.add(box(.11, .07, .012, M.black, .12, .06, .04), at(plane(.1, .06, texScreen()), .12, .06, .047)); return g; } },
+  { id: 'gimbal', cat: 'video', name: 'DJI RS 4 Pro', model: '稳定器 · 丝滑运镜', r: 'R', price: 600, st: { v: 14 }, parent: 'fig', pos: [.22, .64, .06],
+    build: () => { const g = grp(at(cyl(.02, .02, .18, M.black), 0, -.04, 0), at(cyl(.03, .03, .03, M.dark), 0, .06, 0), box(.012, .12, .012, M.dark, .06, .12, 0), box(.07, .012, .012, M.dark, .03, .18, 0), at(cyl(.022, .022, .02, M.red), .06, .06, 0)); const c = camera({ w: .08, h: .055, d: .045, lensL: .05, lensR: .022 }); c.position.set(.0, .14, 0); g.add(c); return g; } },
+  { id: 'monitor', cat: 'video', name: 'Atomos 监视器', model: '胸前实时监看 · 对焦更准', r: 'R', price: 400, st: { v: 6, s: 6 }, parent: 'fig', pos: [0, 1.31, .2], rot: [-.5, 0, 0],
+    build: () => grp(box(.17, .11, .03, M.black), at(plane(.15, .09, texScreen()), 0, 0, .016), box(.03, .2, .01, M.fabric, -.07, .14, -.03), box(.03, .2, .01, M.fabric, .07, .14, -.03)) },
+  { id: 'gopro', cat: 'video', name: 'GoPro 头戴机', model: '第一视角跟拍', r: 'N', price: 200, st: { v: 5, a: 4 }, parent: 'fig', pos: [0, 1.7, 0], scale: 1,
+    build: () => { const t = new THREE.Mesh(new THREE.TorusGeometry(.105, .012, 8, 32), M.black); t.rotation.x = Math.PI / 2 - .25; return grp(t, box(.055, .045, .03, M.black, 0, .06, .1), at(fwd(cyl(.012, .012, .01, M.glass)), -.012, .062, .118)); } },
+  // 灯光
+  { id: 'strobe', cat: 'light', name: 'Profoto B10X 闪光灯', model: '八角柔光箱 · 主光', r: 'SR', price: 1200, st: { l: 28 }, parent: 'ground', pos: [-1.12, 0, -.88], rot: [0, face(-1.12, -.88), 0], scale: 1,
+    build: () => { const g = stand(1.85); const head = new THREE.Group(); head.position.y = 1.92; head.rotation.x = .4; g.add(head);
+      head.add(box(.1, .14, .16, M.black, 0, 0, -.1), at(fwd(cyl(.5, .07, .42, new THREE.MeshStandardMaterial({ color: 0x15161b, side: THREE.DoubleSide, roughness: .9 }), 8, true)), 0, 0, .2));
+      const fm = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4e6, emissiveIntensity: .5, side: THREE.DoubleSide }); const front = new THREE.Mesh(new THREE.CircleGeometry(.5, 8), fm); front.position.z = .41; front.rotation.z = Math.PI / 8; head.add(front);
+      g.add(box(.18, .22, .1, M.dark, .2, .11, 0)); const L = flashable(g, 0xfff4e6, 60); L.position.set(0, 1.6, .5); g.userData.flash.mat = fm; return g; } },
+  { id: 'strip', cat: 'light', name: '条形柔光箱', model: '轮廓光 · 勾出身形', r: 'R', price: 800, st: { l: 16, m: 4 }, parent: 'ground', pos: [1.08, 0, -.98], rot: [0, face(1.08, -.98), 0], scale: 1,
+    build: () => { const g = stand(1.55); const fm = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xe6f0ff, emissiveIntensity: .6 }); g.add(box(.26, 1.0, .14, M.black, 0, 1.45, 0), at(new THREE.Mesh(new THREE.PlaneGeometry(.22, .94), fm), 0, 1.45, .072)); const L = flashable(g, 0xdde8ff, 40); L.position.set(0, 1.45, .4); g.userData.flash.mat = fm; return g; } },
+  { id: 'led', cat: 'light', name: 'Aputure 600d 电影灯', model: '暖光氛围 · 视频常亮', r: 'SR', price: 1500, st: { l: 20, m: 8, v: 6 }, parent: 'ground', pos: [1.32, 0, .78], rot: [0, face(1.32, .78), 0], scale: 1,
+    build: () => { const g = stand(1.62); const head = new THREE.Group(); head.position.y = 1.7; head.rotation.x = .3; g.add(head);
+      head.add(at(fwd(cyl(.1, .11, .26, M.dark)), 0, 0, 0), at(new THREE.Mesh(new THREE.CircleGeometry(.095, 32), new THREE.MeshBasicMaterial({ color: 0xffd39a, toneMapped: false })), 0, 0, .132), limb(V(-.13, 0, 0), V(-.13, -.15, 0), .01, M.silver), limb(V(.13, 0, 0), V(.13, -.15, 0), .01, M.silver), box(.26, .02, .02, M.silver, 0, -.15, 0));
+      const sp = new THREE.SpotLight(0xffc68a, 28, 6, .55, .6, 2); sp.position.set(0, 0, .14); const tgt = new THREE.Object3D(); tgt.position.set(0, -.2, 1.6); head.add(sp, tgt); sp.target = tgt; return g; } },
+  { id: 'speedlight', cat: 'light', name: 'Godox V1 机顶闪光灯', model: '随身补光', r: 'N', price: 200, st: { l: 8 }, parent: 'fig', pos: [.24, 1.5, -.02], rot: [0, 0, -.3],
+    build: () => grp(box(.07, .03, .07, M.dark), box(.055, .08, .04, M.black, 0, .055, 0), at(new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .06, 24), M.black), 0, .12, .01), at(new THREE.Mesh(new THREE.CircleGeometry(.038, 24), new THREE.MeshBasicMaterial({ color: 0xfff6ea, toneMapped: false })), 0, .12, .042)) },
+  { id: 'reflector', cat: 'light', name: '五合一反光板', model: '补光 · 提亮肤色', r: 'N', price: 100, st: { l: 5 }, parent: 'ground', pos: [-.8, 0, 1.0], rot: [0, face(-.8, 1.0), 0], scale: .8,
+    build: () => { const d = cyl(.42, .42, .01, M.gold, 48); d.rotation.x = Math.PI / 2 - .5; d.position.y = .42; const rim = new THREE.Mesh(new THREE.TorusGeometry(.42, .012, 8, 48), M.silver); rim.rotation.copy(d.rotation); rim.rotation.x -= Math.PI / 2; rim.position.copy(d.position); return grp(d, rim, limb(V(0, .02, -.25), V(0, .5, .12), .01, M.dark)); } },
+  { id: 'fog', cat: 'light', name: '烟雾机', model: '丁达尔光 · 仙气飘飘', r: 'R', price: 600, st: { m: 24 }, parent: 'ground', pos: [0, 0, 0], scale: 1,
+    build: () => { const n = 140, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = Math.random() * 7, r = .35 + Math.random() * 1.6; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = .05 + Math.random() * .35; p[i * 3 + 2] = Math.sin(a) * r; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+      const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.1, map: texSoft(), transparent: true, opacity: .16, depthWrite: false, color: 0xcfd6ff }));
+      return grp(pts, box(.3, .16, .2, M.dark, 1.5, .08, -.3), at(fwd(cyl(.03, .03, .1, M.grey)), 1.5, .1, -.15)); },
+    anim: (o, t) => { o.children[0].rotation.y = t * .05; o.children[0].material.opacity = .14 + Math.sin(t * .7) * .04; } },
+  // 航拍
+  { id: 'drone_mini', cat: 'aerial', name: 'DJI Mavic 3 Pro', model: '三摄航拍', r: 'R', price: 1200, st: { a: 30 }, parent: 'ground', scale: 1.6, orbit: { r: 1.0, h: 2.25, speed: .55, phase: 0, bob: .05 }, build: () => drone(1, M.grey, 'mini') },
+  { id: 'drone_inspire', cat: 'aerial', name: 'DJI Inspire 3', model: '8K 电影航拍 · 双人操控', r: 'SSR', price: 4800, st: { a: 50, v: 10 }, parent: 'ground', scale: 1.9, orbit: { r: 1.55, h: 2.75, speed: -.32, phase: 2, bob: .08 }, build: () => drone(1.2, M.white, 'inspire') },
+  { id: 'fpv', cat: 'aerial', name: 'FPV 穿越机', model: '一镜到底 · 穿梭运镜', r: 'SR', price: 1800, st: { a: 20, v: 15 }, parent: 'ground', scale: 1.4, orbit: { r: .78, h: 1.55, speed: 1.7, phase: 4, bob: .25 }, build: () => drone(.7, M.red, 'fpv') },
+  // 支撑
+  { id: 'backpack', cat: 'support', name: '双肩摄影包', model: '器材收纳 · 基础赠送', r: 'N', price: 0, st: { s: 3 }, parent: 'fig', pos: [0, 1.2, -.2], scale: 1,
+    build: () => grp(box(.36, .44, .17, M.fabric), box(.28, .18, .05, M.dark, 0, -.08, -.1), box(.3, .03, .03, M.red, 0, .1, -.09), box(.05, .02, .26, M.dark, -.1, .23, .12), box(.05, .02, .26, M.dark, .1, .23, .12)) },
+  { id: 'tripod', cat: 'support', name: '碳纤维三脚架', model: '长曝光 · 大合影', r: 'N', price: 100, st: { q: 4 }, parent: 'fig', pos: [.06, 1.16, -.34], rot: [0, 0, .38], scale: 1,
+    build: () => grp(at(cyl(.014, .01, .78, M.black), -.02, 0, 0), at(cyl(.014, .01, .78, M.black), .02, 0, 0), at(cyl(.014, .01, .78, M.black), 0, 0, -.025), box(.07, .06, .07, M.silver, 0, .42, 0), at(sph(.03, M.dark), 0, .47, 0)) },
+  { id: 'slider', cat: 'support', name: '电动滑轨', model: '延时 · 平移镜头', r: 'R', price: 500, st: { v: 8 }, parent: 'fig', pos: [0, 1.47, -.33], rot: [0, 0, .08], scale: 1,
+    build: () => grp(box(.78, .03, .06, M.silver), box(.1, .05, .08, M.dark, .1, .03, 0), box(.04, .06, .08, M.black, -.39, 0, 0), box(.04, .06, .08, M.black, .39, 0, 0)) },
+  { id: 'vest', cat: 'support', name: '摄影马甲', model: '口袋多 · 气场足', r: 'N', price: 100, st: { s: 4 }, parent: 'fig', pos: [0, 0, 0], scale: 1,
+    build: () => { const sh = limb(V(0, 1.07, 0), V(0, 1.32, 0), .165, M.olive); sh.scale.set(1.2, 1, .8); const g = grp(sh); for (const x of [-.08, .08]) for (const y of [1.1, 1.24]) g.add(box(.08, .07, .03, M.olive, x, y, .135)); g.add(box(.05, .03, .3, M.olive, -.12, 1.45, 0), box(.05, .03, .3, M.olive, .12, 1.45, 0)); return g; } },
+  // 团队与服务
+  { id: 'assistant', cat: 'team', name: '灯光助理', model: '举灯 · 布光 · 跑腿', r: 'R', price: 800, st: { l: 10, s: 10 }, parent: 'ground', pos: [1.38, 0, -.15], rot: [0, face(1.38, -.15), 0], scale: .9,
+    build: () => { const g = mannequin(0x9fb4ff); const d = cyl(.3, .3, .01, M.silver, 40); d.rotation.x = Math.PI / 2 - .3; d.position.set(-.02, 1.3, .42); g.add(d); return g; } },
+  { id: 'mua', cat: 'team', name: '化妆造型师', model: '全程跟妆 · 发型补妆', r: 'SR', price: 1500, st: { m: 10, s: 15 }, parent: 'ground', pos: [-1.4, 0, -.05], rot: [0, face(-1.4, -.05), 0], scale: .88,
+    build: () => { const g = mannequin(0xffb8d0); g.add(box(.32, .2, .2, M.pink, .3, .1, .1), box(.32, .015, .2, M.silver, .3, .205, .1), at(cyl(.008, .004, .16, M.black), .16, 1.26, .36), at(sph(.018, M.pink), .16, 1.34, .36)); return g; } },
+  { id: 'retouch', cat: 'team', name: '资深精修师', model: '精修 30 张 · 保留皮肤质感', r: 'SR', price: 1800, st: { q: 10, s: 14 }, parent: 'fig', pos: [0, 1.62, 0], scale: 1,
+    build: () => { const g = new THREE.Group(); const t = texRetouch(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; const p = plane(.28, .18, t, { opacity: .92 }); p.position.set(Math.sin(a) * .5, 0, Math.cos(a) * .5); p.rotation.y = a; g.add(p); } return g; },
+    anim: (o, t) => { o.rotation.y = t * .45; } },
+  { id: 'grade', cat: 'team', name: '电影级调色', model: '定制 LUT · 整套统一色调', r: 'R', price: 900, st: { m: 15 }, parent: 'fig', pos: [.58, 1.98, -.3], rot: [0, -.6, 0], scale: 1,
+    build: () => grp(box(.34, .22, .02, M.black), at(plane(.32, .2, texGrade()), 0, 0, .012)),
+    anim: (o, t) => { o.position.y = 1.98 + Math.sin(t * 1.4) * .03; } },
+  { id: 'rush', cat: 'team', name: '24 小时加急', model: '次日出初选', r: 'SR', price: 1500, st: { s: 25 }, parent: 'ground', pos: [0, .03, 0], scale: 1,
+    build: () => { const t = new THREE.Mesh(new THREE.TorusGeometry(.5, .018, 8, 64), M.goldGlow); t.rotation.x = Math.PI / 2; const g = grp(t); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; const b = grp(box(.03, .14, .012, M.goldGlow, 0, .07, 0), box(.03, .14, .012, M.goldGlow, .03, .19, 0)); b.children[0].rotation.z = .5; b.children[1].rotation.z = .5; b.position.set(Math.cos(a) * .5, 0, Math.sin(a) * .5); b.rotation.y = -a; g.add(b); } return g; },
+    anim: (o, t) => { o.rotation.y = -t * 1.2; } },
+  { id: 'director', cat: 'team', name: '创意导演', model: '前期策划 · 分镜脚本', r: 'SSR', price: 3000, st: { m: 20, s: 20 }, parent: 'fig', pos: [0, 2.14, 0], scale: 1,
+    build: () => { const g = grp(box(.26, .18, .016, M.black), at(plane(.25, .17, texClap()), 0, 0, .009)); const arm = new THREE.Group(); arm.position.set(-.13, .1, 0); const bar = box(.26, .035, .016, new THREE.MeshBasicMaterial({ map: texStripes() }), .13, .018, 0); arm.add(bar); g.add(arm); g.userData.arm = arm; return g; },
+    anim: (o, t) => { o.rotation.y = t * .7; const k = (t * .5) % 1; o.userData.arm.rotation.z = k < .1 ? Math.sin(k / .1 * Math.PI) * .5 : 0; } },
+];
+const GEAR_BY = Object.fromEntries(GEAR.map(g => [g.id, g]));
+const PRESETS = {
+  light: ['body_ff', 'lens_2470', 'backpack', 'speedlight', 'tripod'],
+  pro: ['body_flag', 'lens_2470', 'lens_85', 'lens_70200', 'strobe', 'reflector', 'backpack', 'assistant', 'retouch', 'gimbal', 'vest'],
+  flag: ['body_mf', 'lens_85', 'lens_50', 'lens_1424', 'cine_fx3', 'monitor', 'strobe', 'strip', 'led', 'fog', 'drone_mini', 'assistant', 'mua', 'retouch', 'grade', 'vest', 'backpack', 'tripod'],
+  max: GEAR.filter(g => g.cat !== 'body').map(g => g.id).concat('body_pone'),
+};
+const FULL_COUNT = PRESETS.max.length;
+const statSum = st => Object.values(st).reduce((a, b) => a + b, 0);
+const MAX_POWER = PRESETS.max.reduce((a, id) => a + statSum(GEAR_BY[id].st), 0) * 10;
+const TIERS = [
+  [0, '空白模特', '还没带装备，手机都没拿', '#6b7194', '空'],
+  [.001, '青铜摄影师', '能拍，记录为主', '#c08457', '铜'],
+  [.08, '白银摄影师', '靠谱，日常够用', '#c6ccd8', '银'],
+  [.18, '黄金摄影师', '专业水准，出片稳定', '#ffcc4d', '金'],
+  [.32, '铂金摄影师', '资深配置，有布光有后期', '#5ee0d0', '铂'],
+  [.48, '钻石摄影师', '行业顶配，电影感', '#7aa8ff', '钻'],
+  [.66, '星耀大师', '一个人就是一个剧组', '#c58bff', '星'],
+  [.86, '最强王者', '人形移动摄影棚', '#ffb627', '王'],
+];
+
+/* =====================================================================
+   3D scene
+   ===================================================================== */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('three');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a0c1c, 7, 16);
+const cam = new THREE.PerspectiveCamera(36, 1, .05, 50);
+cam.position.set(3.5, 2.25, 4.7);
+const controls = new OrbitControls(cam, canvas);
+controls.target.set(0, 1.15, 0); controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 2.2; controls.maxDistance = 8; controls.maxPolarAngle = Math.PI * .52;
+controls.autoRotate = !reduce; controls.autoRotateSpeed = .6;
+
+scene.add(new THREE.HemisphereLight(0xc4ccff, 0x1a1630, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(3, 5, 3); key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); scene.add(key);
+const rim1 = new THREE.PointLight(0x7a5cff, 18, 8, 2); rim1.position.set(-2.2, 2.6, -2); scene.add(rim1);
+const rim2 = new THREE.PointLight(0xffb627, 10, 6, 2); rim2.position.set(2, 1.2, -2); scene.add(rim2);
+
+// platform
+const plat = cyl(2.1, 2.25, .1, mat(0x14173a, { metalness: .4, roughness: .6 }), 72); plat.position.y = -.05; plat.receiveShadow = true; scene.add(plat);
+const edge = new THREE.Mesh(new THREE.TorusGeometry(2.12, .012, 8, 128), new THREE.MeshBasicMaterial({ color: 0x4f5bd5, toneMapped: false })); edge.rotation.x = Math.PI / 2; edge.position.y = .001; scene.add(edge);
+for (const r of [.7, 1.3, 1.85]) { const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + .006, 96), new THREE.MeshBasicMaterial({ color: 0x2a3170, transparent: true, opacity: .8 })); ring.rotation.x = -Math.PI / 2; ring.position.y = .002; scene.add(ring); }
+const aura = new THREE.Mesh(new THREE.RingGeometry(.28, .42, 64), new THREE.MeshBasicMaterial({ color: 0xffb627, transparent: true, opacity: 0, toneMapped: false, side: THREE.DoubleSide })); aura.rotation.x = -Math.PI / 2; aura.position.y = .004; scene.add(aura);
+// rising sparkles for high tiers
+const SPK = 160, spkPos = new Float32Array(SPK * 3), spkSeed = [];
+for (let i = 0; i < SPK; i++) { spkSeed.push([Math.random() * 7, .25 + Math.random() * .5, Math.random() * 2.4, .3 + Math.random() * .6]); }
+const spkGeo = new THREE.BufferGeometry(); spkGeo.setAttribute('position', new THREE.BufferAttribute(spkPos, 3));
+const sparkles = new THREE.Points(spkGeo, new THREE.PointsMaterial({ size: .05, color: 0xffcf6b, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, map: texSoft() }));
+scene.add(sparkles);
+
+const ground = new THREE.Group(); scene.add(ground);
+const fig = new THREE.Group(); scene.add(fig);
+fig.add(mannequin());
+const belt = new THREE.Mesh(new THREE.TorusGeometry(.19, .022, 8, 40), M.black); belt.rotation.x = Math.PI / 2; belt.scale.set(1.12, .85, 1); belt.position.y = .99; belt.visible = false; fig.add(belt);
+fig.traverse(o => { if (o.isMesh) o.castShadow = true; });
+
+// gear case (装备箱)
+const CASE_POS = V(-1.5, 0, .62);
+const gearCase = new THREE.Group(); gearCase.position.copy(CASE_POS); gearCase.rotation.y = .7; scene.add(gearCase);
+const caseMat = mat(0x22263f, { metalness: .5, roughness: .4 });
+gearCase.add(box(.62, .32, .42, caseMat, 0, .16, 0), box(.64, .03, .44, M.silver, 0, .31, 0), box(.64, .03, .44, M.silver, 0, .015, 0));
+for (const x of [-.24, .24]) gearCase.add(box(.06, .06, .02, M.gold, x, .25, .215));
+gearCase.add(box(.56, .02, .36, mat(0x111325, { emissive: 0x3b2a00, emissiveIntensity: .8 }), 0, .305, 0));
+const lid = new THREE.Group(); lid.position.set(0, .32, -.21); gearCase.add(lid);
+lid.add(box(.62, .1, .42, caseMat, 0, .05, .21), box(.64, .02, .44, M.silver, 0, .1, .21), box(.2, .025, .04, M.black, 0, .12, .21));
+const caseGlow = new THREE.PointLight(0xffb627, 0, 2, 2); caseGlow.position.set(0, .5, 0); gearCase.add(caseGlow);
+const CASE_MOUTH = V(-1.5, .5, .62);
+
+/* ---------- item life-cycle ---------- */
+const live = new Map();
+let lastActivity = -10, shake = 0, clockT = 0;
+function targetOf(def, t) {
+  if (def.orbit) { const o = def.orbit, a = o.phase + t * o.speed; return V(Math.cos(a) * o.r, o.h + Math.sin(t * 2.1 + o.phase) * o.bob, Math.sin(a) * o.r); }
+  return V(...def.pos);
+}
+function spawn(def) {
+  const parent = def.parent === 'fig' ? fig : ground;
+  const obj = def.build();
+  obj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  const s = def.scale ?? 1.35;
+  const start = parent.worldToLocal(CASE_MOUTH.clone());
+  obj.position.copy(start); obj.scale.setScalar(.01);
+  parent.add(obj);
+  live.set(def.id, { def, obj, parent, s, state: 'in', t0: clockT, start, dur: reduce ? .05 : .85 });
+  lastActivity = clockT;
+}
+function despawn(id) {
+  const it = live.get(id); if (!it || it.state === 'out') return;
+  it.state = 'out'; it.t0 = clockT; it.start = it.obj.position.clone(); it.dur = reduce ? .05 : .55;
+  lastActivity = clockT;
+}
+const easeOutBack = x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const bez = (a, c, b, u) => a.clone().multiplyScalar((1 - u) ** 2).add(c.clone().multiplyScalar(2 * u * (1 - u))).add(b.clone().multiplyScalar(u * u));
+
+const bursts = [];
+function burst(worldPos, color) {
+  const n = 46, pos = new Float32Array(n * 3), vel = [];
+  for (let i = 0; i < n; i++) { pos.set([worldPos.x, worldPos.y, worldPos.z], i * 3); vel.push(V(Math.random() - .5, Math.random() * .9, Math.random() - .5).normalize().multiplyScalar(.6 + Math.random() * 1.2)); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(geo, new THREE.PointsMaterial({ size: .06, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, map: texSoft() }));
+  scene.add(p); bursts.push({ p, vel, t0: clockT });
+}
+function floatText(worldPos, html, color) {
+  const v = worldPos.clone().project(cam);
+  const el = document.createElement('div'); el.className = 'float'; el.innerHTML = html; el.style.color = color;
+  el.style.left = ((v.x + 1) / 2 * stage.clientWidth) + 'px'; el.style.top = ((1 - v.y) / 2 * stage.clientHeight) + 'px';
+  document.getElementById('hud').appendChild(el); setTimeout(() => el.remove(), 1400);
+}
+
+function updateItems(t, dt) {
+  for (const [id, it] of live) {
+    const { def, obj } = it;
+    const u = Math.min(1, (t - it.t0) / it.dur);
+    if (it.state === 'in') {
+      const tgt = targetOf(def, t);
+      const ctrl = it.start.clone().lerp(tgt, .5); ctrl.y += 1.1;
+      obj.position.copy(bez(it.start, ctrl, tgt, u));
+      obj.scale.setScalar(Math.max(.01, it.s * easeOutBack(u)));
+      const r = def.rot || [0, 0, 0];
+      obj.rotation.set(r[0], r[1] + (1 - u) * Math.PI * 3, r[2]);
+      if (u >= 1) {
+        it.state = 'idle'; obj.scale.setScalar(it.s);
+        const wp = obj.getWorldPosition(V(0, 0, 0)); if (def.parent === 'ground' && !def.orbit) wp.y += .9;
+        burst(wp, RAR[def.r].color); shake = .12;
+        floatText(wp, (def.price ? '+¥' + def.price.toLocaleString('zh-CN') : '赠送') + `<small>${def.name}</small>`, RAR[def.r].color);
+      }
+    } else if (it.state === 'idle') {
+      if (def.orbit) {
+        obj.position.copy(targetOf(def, t));
+        const a = def.orbit.phase + t * def.orbit.speed;
+        obj.rotation.set(0, -a + (def.orbit.speed > 0 ? Math.PI : 0), Math.sin(t * 3) * .08 + (def.id === 'fpv' ? .4 : 0));
+      }
+    } else if (it.state === 'out') {
+      const tgt = it.parent.worldToLocal(CASE_MOUTH.clone());
+      const ctrl = it.start.clone().lerp(tgt, .5); ctrl.y += .8;
+      obj.position.copy(bez(it.start, ctrl, tgt, u));
+      obj.scale.setScalar(Math.max(.001, it.s * (1 - u)));
+      obj.rotation.y += dt * 10;
+      if (u >= 1) { it.parent.remove(obj); obj.traverse(o => { o.geometry?.dispose?.(); }); live.delete(id); }
+    }
+    if (it.state !== 'out') {
+      def.anim?.(obj, t);
+      obj.userData.rotors?.forEach(r => r.rotation.y += dt * 40);
+      const f = obj.userData.flash;
+      if (f && it.state === 'idle') {
+        f.next -= dt; if (f.next <= 0) { f.v = 1; f.next = 2.5 + Math.random() * 3.5; }
+        f.v = Math.max(0, f.v - dt * 5);
+        f.L.intensity = f.v * f.power; if (f.mat) f.mat.emissiveIntensity = .5 + f.v * 3;
+      }
+    }
+  }
+}
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); cam.aspect = w / h;
+  cam.fov = w / h < .9 ? 46 : 36; cam.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+// click the case → gacha
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let downAt = null;
+canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', e => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  const r = canvas.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ptr, cam); if (ray.intersectObject(gearCase, true).length) gacha();
+});
+canvas.addEventListener('pointermove', e => {
+  const r = canvas.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ptr, cam); canvas.style.cursor = ray.intersectObject(gearCase, true).length ? 'pointer' : 'grab';
+});
+
+let auraTarget = 0, auraColor = new THREE.Color(0xffb627), isFull = false;
+const clock = new THREE.Clock();
+function loop() {
+  const dt = Math.min(clock.getDelta(), .05); clockT += dt; const t = clockT;
+  fig.position.y = Math.sin(t * 1.6) * .006;
+  updateItems(t, dt);
+  // case lid
+  const open = t - lastActivity < .9 ? 1 : 0;
+  lid.rotation.x += ((open ? -1.9 : 0) - lid.rotation.x) * Math.min(1, dt * 9);
+  caseGlow.intensity += ((open ? 4 : .4) - caseGlow.intensity) * Math.min(1, dt * 6);
+  // bursts
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i], k = t - b.t0, a = b.p.geometry.attributes.position;
+    for (let j = 0; j < b.vel.length; j++) { b.vel[j].y -= dt * 1.4; a.array[j * 3] += b.vel[j].x * dt; a.array[j * 3 + 1] += b.vel[j].y * dt; a.array[j * 3 + 2] += b.vel[j].z * dt; }
+    a.needsUpdate = true; b.p.material.opacity = Math.max(0, 1 - k / .9);
+    if (k > .9) { scene.remove(b.p); b.p.geometry.dispose(); bursts.splice(i, 1); }
+  }
+  // aura + sparkles
+  aura.material.opacity += (auraTarget * .85 - aura.material.opacity) * Math.min(1, dt * 3);
+  aura.material.color.lerp(auraColor, Math.min(1, dt * 3));
+  aura.scale.setScalar(1 + auraTarget * 1.6 + Math.sin(t * 3) * .04 * auraTarget);
+  const spkOn = Math.max(0, (auraTarget - .55) / .45);
+  sparkles.material.opacity += (spkOn - sparkles.material.opacity) * Math.min(1, dt * 2);
+  sparkles.material.color.lerp(auraColor, Math.min(1, dt * 3));
+  if (sparkles.material.opacity > .01) {
+    for (let i = 0; i < SPK; i++) { const [a0, r, off, sp] = spkSeed[i]; const y = (off + t * sp) % 2.4; const a = a0 + t * .4; spkPos[i * 3] = Math.cos(a) * (r + y * .08); spkPos[i * 3 + 1] = y; spkPos[i * 3 + 2] = Math.sin(a) * (r + y * .08); }
+    spkGeo.attributes.position.needsUpdate = true;
+  }
+  rim2.intensity = 10 + (isFull ? 25 + Math.sin(t * 4) * 8 : 0);
+  // camera shake
+  controls.update();
+  if (shake > 0) { shake = Math.max(0, shake - dt * .5); cam.position.x += (Math.random() - .5) * shake * .1; cam.position.y += (Math.random() - .5) * shake * .1; }
+  renderer.render(scene, cam);
+  requestAnimationFrame(loop);
+}
+
+/* ---------- thumbnails rendered from the real 3D models ---------- */
+function makeThumbs() {
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setSize(128, 128); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
+  const s = new THREE.Scene(); r.toneMappingExposure = 1.6; s.add(new THREE.HemisphereLight(0xe8ecff, 0x50506a, 4)); const d = new THREE.DirectionalLight(0xffffff, 4); d.position.set(2, 3, 4); s.add(d); const d2 = new THREE.DirectionalLight(0x9fb4ff, 3); d2.position.set(-3, 1, -2); s.add(d2);
+  const c = new THREE.PerspectiveCamera(30, 1, .01, 50); const out = {};
+  for (const def of GEAR) {
+    const o = def.build(); if (def.rot) o.rotation.set(def.rot[0], def.rot[1] - (def.parent === 'ground' ? def.rot[1] + .6 : 0), def.rot[2]); s.add(o);
+    const b = new THREE.Box3().setFromObject(o), ctr = b.getCenter(V(0, 0, 0)), size = b.getSize(V(0, 0, 0)).length();
+    const dist = size / (2 * Math.tan(15 * Math.PI / 180)) * .82;
+    c.position.copy(ctr).add(V(.75, .45, 1).normalize().multiplyScalar(dist)); c.lookAt(ctr); c.near = dist / 20; c.far = dist * 4; c.updateProjectionMatrix();
+    r.render(s, c); out[def.id] = r.domElement.toDataURL('image/png'); s.remove(o);
+  }
+  r.dispose(); r.forceContextLoss?.(); return out;
+}
+
+/* =====================================================================
+   state + UI
+   ===================================================================== */
+const sel = new Set();
+const $ = id => document.getElementById(id);
+const yuan = n => '¥' + Math.round(n).toLocaleString('zh-CN');
+const tabs = $('tabs'), list = $('gearList');
+let activeTab = 'all';
+function renderTabs() {
+  tabs.innerHTML = [['all', '全部'], ...CATS.map(c => [c.id, c.name])].map(([id, n]) => `<button type="button" class="tab" data-tab="${id}" aria-pressed="${id === activeTab}">${n}</button>`).join('');
+}
+tabs.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; activeTab = b.dataset.tab; renderTabs(); list.querySelectorAll('.cat').forEach(c => c.hidden = activeTab !== 'all' && c.dataset.cat !== activeTab); });
+function renderList(thumbs = {}) {
+  list.innerHTML = CATS.map(c => `<section class="cat" data-cat="${c.id}" ${activeTab !== 'all' && activeTab !== c.id ? 'hidden' : ''}>
+    <div class="cat-head">${c.name}<em>${c.note}</em></div>
+    ${GEAR.filter(g => g.cat === c.id).map(g => `<button type="button" class="card" data-id="${g.id}" data-r="${g.r}" aria-pressed="${sel.has(g.id)}">
+      <span class="thumb">${thumbs[g.id] ? `<img src="${thumbs[g.id]}" alt="">` : ''}</span>
+      <span style="min-width:0"><span class="card-name"><span class="rar">${RAR[g.r].label}</span>${g.name}</span><br><span class="card-model">${g.model}</span></span>
+      <span class="card-price">${g.price ? '+' + yuan(g.price) : '赠送'}<small>${sel.has(g.id) ? '已装备' : '+' + statSum(g.st) * 10 + ' 战力'}</small></span>
+    </button>`).join('')}
+  </section>`).join('');
+}
+list.addEventListener('click', e => { const b = e.target.closest('.card'); if (b) toggle(b.dataset.id); });
+
+function toggle(id, force) {
+  const def = GEAR_BY[id]; const on = force ?? !sel.has(id);
+  if (on === sel.has(id)) return;
+  if (on) {
+    if (def.cat === 'body') for (const x of [...sel]) if (GEAR_BY[x].cat === 'body') { sel.delete(x); despawn(x); }
+    sel.add(id); spawn(def);
+  } else { sel.delete(id); despawn(id); const p = def.parent === 'fig' ? fig : ground; floatText(p.localToWorld(targetOf(def, clockT)), (def.price ? '−' + yuan(def.price) : '卸下') + `<small>${def.name}</small>`, '#8d91b8'); }
+  update();
+}
+let queue = [];
+function applySet(ids) {
+  queue.forEach(clearTimeout); queue = [];
+  const want = new Set(ids);
+  [...sel].filter(x => !want.has(x)).forEach((x, i) => queue.push(setTimeout(() => toggle(x, false), i * 40)));
+  const add = ids.filter(x => !sel.has(x));
+  add.forEach((x, i) => queue.push(setTimeout(() => toggle(x, true), 150 + i * (reduce ? 10 : 110))));
+}
+function gacha() {
+  const pool = GEAR.filter(g => !sel.has(g.id) && !(g.cat === 'body' && [...sel].some(x => GEAR_BY[x].cat === 'body')));
+  if (!pool.length) { toast('已经满配了，箱子空了'); return; }
+  const w = { N: 4, R: 3, SR: 2, SSR: 1 }; let tot = pool.reduce((a, g) => a + w[g.r], 0), k = Math.random() * tot;
+  const pick = pool.find(g => (k -= w[g.r]) <= 0) || pool[0];
+  toggle(pick.id, true); toast(`开出【${RAR[pick.r].label}】${pick.name}`);
+}
+$('presets').addEventListener('click', e => {
+  const p = e.target.closest('[data-preset]')?.dataset.preset; if (!p) return;
+  if (p === 'gacha') return gacha();
+  if (p === 'clear') return applySet([]);
+  applySet(PRESETS[p]);
+});
+
+/* ---------- stats, tier, quote ---------- */
+function stats() { const s = { q: 0, l: 0, m: 0, v: 0, a: 0, s: 0 }; for (const id of sel) for (const [k, v] of Object.entries(GEAR_BY[id].st)) s[k] += v; return s; }
+const total = () => BASE.price + [...sel].reduce((a, id) => a + GEAR_BY[id].price, 0);
+let shownPrice = 0, shownPower = 0, targetPrice = 0, targetPower = 0;
+function tick() {
+  shownPrice += (targetPrice - shownPrice) * .18; if (Math.abs(targetPrice - shownPrice) < 1) shownPrice = targetPrice;
+  shownPower += (targetPower - shownPower) * .18; if (Math.abs(targetPower - shownPower) < 1) shownPower = targetPower;
+  $('topTotal').textContent = yuan(shownPrice); $('power').textContent = Math.round(shownPower).toLocaleString('zh-CN');
+  requestAnimationFrame(tick);
+}
+let sampleTimer = 0, wasFull = false;
+function update() {
+  const S = stats(), power = statSum(S) * 10, ratio = power / MAX_POWER;
+  targetPrice = total(); targetPower = power;
+  const tierIdx = TIERS.reduce((a, t, i) => (ratio >= t[0] && (i > 0 ? power > 0 : true) ? i : a), 0);
+  const [, tn, ts, tc, te] = TIERS[tierIdx]; const next = TIERS[tierIdx + 1];
+  document.documentElement.style.setProperty('--tier', tc);
+  $('tierName').textContent = tn; $('tierSub').textContent = ts; $('emblem').textContent = te;
+  $('tierBar').style.width = (next ? Math.min(100, (ratio - TIERS[tierIdx][0]) / (next[0] - TIERS[tierIdx][0]) * 100) : 100) + '%';
+  $('count').textContent = `${sel.size} / ${FULL_COUNT}`;
+  auraTarget = Math.min(1, ratio * 1.1); auraColor = new THREE.Color(tc);
+  belt.visible = [...sel].some(id => GEAR_BY[id].cat === 'lens');
+  isFull = sel.size >= FULL_COUNT;
+  $('banner').classList.toggle('on', isFull);
+  if (isFull && !wasFull) { shake = .5; toast('全副武装！同行看了沉默，客户看了下单'); }
+  wasFull = isFull;
+  renderList(window.__thumbs);
+  drawRadar(S);
+  clearTimeout(sampleTimer); const sc = $('sample'); sc.classList.add('dev');
+  sampleTimer = setTimeout(() => { drawSample(sc, S); renderTags(S); sc.classList.remove('dev'); }, reduce ? 0 : 260);
+  renderDeliverables(S); renderQuote();
+  window.claude?.hot?.snapshot?.(() => ({ sel: [...sel] }));
+}
+function renderQuote() {
+  const rows = [...sel].map(id => GEAR_BY[id]).sort((a, b) => CATS.findIndex(c => c.id === a.cat) - CATS.findIndex(c => c.id === b.cat));
+  $('itemCount').textContent = rows.length ? `${rows.length} 项加配` : '只含基础出勤';
+  $('quote').innerHTML = `<div class="qrow base"><span>${BASE.name}</span><span>${yuan(BASE.price)}</span></div>` +
+    rows.map(g => `<div class="qrow"><span>${g.name}</span><span>${g.price ? '+' + yuan(g.price) : '赠送'}</span></div>`).join('') +
+    `<div class="qrow total"><span>合计</span><span>${yuan(total())}</span></div><div class="qnote">价格为服务配置费，含对应器材、人员与后期。具体以拍摄合同为准。</div>`;
+}
+function quoteText() {
+  const rows = [...sel].map(id => GEAR_BY[id]);
+  const S = stats(); const tier = $('tierName').textContent;
+  return `【${BRAND} 拍摄配置单】\n段位：${tier}  战力：${statSum(S) * 10}\n\n${BASE.name}  ${yuan(BASE.price)}\n` +
+    rows.map(g => `· ${g.name}（${g.model}）  ${g.price ? '+' + yuan(g.price) : '赠送'}`).join('\n') +
+    `\n\n合计：${yuan(total())}\n\n交付：\n${deliverables(S).map(x => '· ' + x).join('\n')}`;
+}
+
+/* ---------- radar ---------- */
+function drawRadar(S) {
+  const c = $('radar'), x = c.getContext('2d'), W = c.width, H = c.height, cx = W / 2, cy = H / 2 + 6, R = 170;
+  const css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue('--line').trim(), muted = css.getPropertyValue('--muted').trim(), fg = css.getPropertyValue('--fg').trim(), tc = css.getPropertyValue('--tier').trim() || '#ffb627';
+  x.clearRect(0, 0, W, H); const n = 6, pt = (i, r) => [cx + Math.sin(i / n * Math.PI * 2) * r, cy - Math.cos(i / n * Math.PI * 2) * r];
+  x.lineWidth = 2;
+  for (let k = 1; k <= 4; k++) { x.beginPath(); for (let i = 0; i <= n; i++) x.lineTo(...pt(i % n, R * k / 4)); x.strokeStyle = line; x.stroke(); }
+  for (let i = 0; i < n; i++) { x.beginPath(); x.moveTo(cx, cy); x.lineTo(...pt(i, R)); x.stroke(); }
+  x.beginPath(); STAT_KEYS.forEach(([k], i) => x.lineTo(...pt(i, R * Math.min(1, S[k] / 100) + 2))); x.closePath();
+  x.fillStyle = tc + '55'; x.fill(); x.strokeStyle = tc; x.lineWidth = 3; x.stroke();
+  x.font = '600 26px "Noto Sans SC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  STAT_KEYS.forEach(([k, name], i) => { const [px, py] = pt(i, R + 40); x.fillStyle = fg; x.fillText(name, px, py - 12); x.fillStyle = muted; x.font = '600 22px "Chakra Petch", monospace'; x.fillText(Math.min(100, S[k]), px, py + 14); x.font = '600 26px "Noto Sans SC", sans-serif'; });
+}
+
+/* ---------- sample photo (procedural) ---------- */
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const lerpC = (a, b, t) => { const A = new THREE.Color(a), B = new THREE.Color(b); return '#' + A.lerp(B, Math.max(0, Math.min(1, t))).getHexString(); };
+function bodyLabel() {
+  const b = [...sel].find(id => GEAR_BY[id].cat === 'body');
+  return { body_ff: 'SONY α7R V', body_flag: 'CANON EOS R1', body_mf: 'HASSELBLAD X2D', body_pone: 'PHASE ONE IQ4' }[b] || '手机 1x';
+}
+function lensLabel() {
+  for (const [id, l] of [['lens_85', '85mm F1.2'], ['lens_50', '50mm F1.0'], ['lens_2470', '35mm F2.8'], ['lens_70200', '135mm F2.8'], ['lens_1424', '16mm F2.8'], ['lens_100', '100mm F2.8']]) if (sel.has(id)) return l;
+  return [...sel].some(id => GEAR_BY[id].cat === 'body') ? '套机镜头 F4' : '4.3mm F1.8';
+}
+function drawSample(cv, S) {
+  const W = cv.width, H = cv.height, ctx = cv.getContext('2d');
+  const res = Math.min(1, .12 + S.q / 70);
+  const off = document.createElement('canvas'); off.width = Math.max(48, Math.round(W * res)); off.height = Math.max(30, Math.round(H * res));
+  const c = off.getContext('2d'); c.scale(off.width / W, off.height / H);
+  paintScene(c, W, H, S);
+  ctx.imageSmoothingEnabled = res > .75; ctx.clearRect(0, 0, W, H); ctx.drawImage(off, 0, 0, W, H);
+  if (res < 1) { const img = ctx.getImageData(0, 0, W, H), d = img.data, amt = (1 - res) * 70, R = rng(7); for (let i = 0; i < d.length; i += 4) { const n = (R() - .5) * amt; d[i] += n; d[i + 1] += n; d[i + 2] += n; } ctx.putImageData(img, 0, 0); }
+  // overlays
+  let top = 0;
+  if (S.v >= 25) {
+    const bar = Math.round((H - W / 2.39) / 2); top = bar; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+    ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(20, bar / 2, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '600 15px "Chakra Petch", monospace'; ctx.textBaseline = 'middle'; ctx.fillText('REC  00:01:24:12', 32, bar / 2);
+    ctx.textAlign = 'right'; ctx.fillText(sel.has('cine_red') ? '8K RAW · 2.39:1' : '4K 10bit · 2.39:1', W - 14, bar / 2); ctx.textAlign = 'left';
+  }
+  if (S.a >= 25) {
+    const w = W * .26, h = w * .62, x = W - w - 12, y = top + 12;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#2f5d4a'); g.addColorStop(1, '#88704a'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x - 10, y + h * .7); ctx.bezierCurveTo(x + w * .3, y + h * .2, x + w * .6, y + h * 1.1, x + w + 10, y + h * .3); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + w * .52, y + h * .55, 3.5, 0, 7); ctx.fill();
+    ctx.restore(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = '#fff'; ctx.font = '600 12px "Noto Sans SC", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText(S.a >= 60 ? '航拍 · 8K · 120m' : '航拍 · 120m', x + 6, y + 5);
+  }
+  ctx.textBaseline = 'alphabetic'; ctx.font = '600 13px "Chakra Petch", monospace'; ctx.fillStyle = 'rgba(255,255,255,.85)';
+  const iso = S.l >= 30 ? 'ISO 100' : S.l >= 10 ? 'ISO 400' : 'ISO 3200';
+  ctx.fillText(`${bodyLabel()} · ${lensLabel()} · 1/200s · ${iso}`, 14, H - (S.v >= 25 ? (H - W / 2.39) / 2 + 12 : 14));
+}
+function paintScene(c, W, H, S) {
+  const R = rng(42), mood = Math.min(1, S.m / 60), lit = Math.min(1, S.l / 50);
+  const bokeh = sel.has('lens_85') || sel.has('lens_50'), fog = sel.has('fog'), grade = sel.has('grade');
+  const sky = c.createLinearGradient(0, 0, 0, H * .75);
+  sky.addColorStop(0, lerpC('#7d838c', '#13203d', mood)); sky.addColorStop(1, lerpC('#a9adb3', '#f08a4b', mood));
+  c.fillStyle = sky; c.fillRect(0, 0, W, H);
+  if (mood > .15) { const g = c.createRadialGradient(W * .72, H * .66, 0, W * .72, H * .66, W * .4); g.addColorStop(0, `rgba(255,205,140,${.9 * mood})`); g.addColorStop(1, 'rgba(255,160,90,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  // background city/hills
+  c.save(); if (bokeh) c.filter = 'blur(7px)';
+  c.fillStyle = lerpC('#666c74', '#2a2b4a', mood);
+  c.beginPath(); c.moveTo(0, H * .72); for (let x = 0; x <= W; x += 22) { const h = H * (.5 + R() * .16); c.lineTo(x, h); c.lineTo(x + 18, h); } c.lineTo(W, H * .75); c.lineTo(0, H * .75); c.fill();
+  c.fillStyle = lerpC('#9aa0a8', '#ffd28a', mood);
+  for (let i = 0; i < 60; i++) c.fillRect(R() * W, H * (.55 + R() * .18), 3, 4);
+  c.restore();
+  if (bokeh) { for (let i = 0; i < 22; i++) { const r = 8 + R() * 18; c.fillStyle = `rgba(255,${180 + R() * 60 | 0},140,${.12 + R() * .2})`; c.beginPath(); c.arc(R() * W, H * (.25 + R() * .45), r, 0, 7); c.fill(); } }
+  // ground
+  const gg = c.createLinearGradient(0, H * .72, 0, H); gg.addColorStop(0, lerpC('#7b7e82', '#3a2a35', mood)); gg.addColorStop(1, lerpC('#5d6064', '#140f1c', mood)); c.fillStyle = gg; c.fillRect(0, H * .72, W, H * .28);
+  if (fog) for (let i = 0; i < 4; i++) { const y = H * (.55 + i * .1); const g = c.createLinearGradient(0, y - 40, 0, y + 40); g.addColorStop(0, 'rgba(255,240,230,0)'); g.addColorStop(.5, 'rgba(255,236,220,.32)'); g.addColorStop(1, 'rgba(255,240,230,0)'); c.fillStyle = g; c.fillRect(0, y - 40, W, 80); }
+  if (fog && lit > .3) { c.save(); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { c.fillStyle = 'rgba(255,220,170,.07)'; c.beginPath(); c.moveTo(W * (.05 + i * .06), 0); c.lineTo(W * (.12 + i * .06), 0); c.lineTo(W * (.5 + i * .04), H); c.lineTo(W * (.38 + i * .04), H); c.fill(); } c.restore(); }
+  // warm practical glow behind subject
+  if (sel.has('led')) { const g = c.createRadialGradient(W * .46, H * .5, 0, W * .46, H * .5, H * .5); g.addColorStop(0, 'rgba(255,190,120,.45)'); g.addColorStop(1, 'rgba(255,190,120,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  // subject: bride silhouette
+  const cx = W * .46, base = H * .95, hh = H * .66;
+  const path = new Path2D();
+  path.arc(cx, base - hh * .9, hh * .075, 0, Math.PI * 2);
+  path.moveTo(cx - hh * .05, base - hh * .8);
+  path.quadraticCurveTo(cx - hh * .14, base - hh * .72, cx - hh * .12, base - hh * .5);
+  path.quadraticCurveTo(cx - hh * .3, base - hh * .1, cx - hh * .36, base);
+  path.lineTo(cx + hh * .36, base);
+  path.quadraticCurveTo(cx + hh * .3, base - hh * .1, cx + hh * .12, base - hh * .5);
+  path.quadraticCurveTo(cx + hh * .14, base - hh * .72, cx + hh * .05, base - hh * .8); path.closePath();
+  const sg = c.createLinearGradient(cx - hh * .3, 0, cx + hh * .3, 0);
+  sg.addColorStop(0, lerpC('#25272e', '#fff1e4', lit)); sg.addColorStop(.6, lerpC('#1d1f26', '#e3cfc2', lit)); sg.addColorStop(1, lerpC('#17181e', '#6e5c58', lit * .8));
+  c.fillStyle = sg; c.fill(path);
+  // veil
+  c.fillStyle = `rgba(255,255,255,${.12 + lit * .25})`; c.beginPath(); c.moveTo(cx, base - hh * .97); c.quadraticCurveTo(cx + hh * .45, base - hh * .6, cx + hh * .5, base - hh * .05); c.lineTo(cx + hh * .2, base - hh * .1); c.quadraticCurveTo(cx + hh * .15, base - hh * .6, cx, base - hh * .97); c.fill();
+  if (sel.has('strip') || S.l >= 45) { c.save(); c.shadowColor = 'rgba(255,230,200,.95)'; c.shadowBlur = 16; c.strokeStyle = 'rgba(255,240,220,.85)'; c.lineWidth = 2.2; c.stroke(path); c.restore(); }
+  if (sel.has('retouch')) { const g = c.createRadialGradient(cx - hh * .02, base - hh * .9, 0, cx, base - hh * .9, hh * .12); g.addColorStop(0, 'rgba(255,240,230,.55)'); g.addColorStop(1, 'rgba(255,240,230,0)'); c.fillStyle = g; c.fillRect(cx - hh * .2, base - hh * 1.05, hh * .4, hh * .3); }
+  if (sel.has('mua')) { c.fillStyle = 'rgba(255,190,200,.9)'; for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(cx - hh * .06 + i * hh * .02, base - hh * .975 - Math.sin(i / 6 * Math.PI) * hh * .02, hh * .012, 0, 7); c.fill(); } }
+  if (grade) { c.save(); c.globalCompositeOperation = 'soft-light'; const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, 'rgba(0,140,170,.85)'); g.addColorStop(1, 'rgba(255,130,40,.85)'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore(); }
+  else if (mood < .2) { c.fillStyle = 'rgba(150,150,150,.15)'; c.fillRect(0, 0, W, H); }
+  const v = c.createRadialGradient(W / 2, H / 2, H * .3, W / 2, H / 2, W * .65); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${.1 + mood * .5})`); c.fillStyle = v; c.fillRect(0, 0, W, H);
+}
+function tagList(S) {
+  const t = [];
+  t.push(S.q === 0 ? ['手机直出，噪点明显', 0] : S.q < 25 ? ['清晰可用', 0] : S.q < 50 ? ['通透细腻', 0] : S.q < 80 ? ['商业级高清', 1] : ['亿级像素，可做巨幅喷绘', 1]);
+  t.push(S.l === 0 ? ['看天吃饭的自然光', 0] : S.l < 20 ? ['基础补光', 0] : S.l < 45 ? ['立体光影', 0] : ['杂志级布光', 1]);
+  t.push(S.m < 10 ? ['记录感', 0] : S.m < 30 ? ['有氛围', 0] : S.m < 60 ? ['电影感', 1] : ['大片叙事感', 1]);
+  if (sel.has('lens_85') || sel.has('lens_50')) t.push(['奶油虚化', 1]);
+  if (sel.has('fog')) t.push(['丁达尔光', 1]);
+  if (sel.has('grade')) t.push(['青橙电影色调', 0]);
+  if (S.v >= 25) t.push([S.v >= 60 ? '电影级动态影像' : '视频花絮', 1]);
+  if (S.a >= 25) t.push(['航拍视角', 1]);
+  return t;
+}
+function renderTags(S) { $('tags').innerHTML = tagList(S).map(([s, hi]) => `<span class="${hi ? 'hi' : ''}">${s}</span>`).join(''); }
+function deliverables(S) {
+  const d = ['全部底片', sel.has('grade') ? '精选 60 张，统一电影级调色' : '精选 20 张基础调色'];
+  if (sel.has('retouch')) d.push('精修 30 张，保留皮肤质感');
+  if (sel.has('cine_red')) d.push('8K 电影级 MV 一支（3–5 分钟）');
+  else if (sel.has('cine_fx3')) d.push('4K 花絮短片一支（3 分钟）');
+  if (S.a >= 25) d.push('航拍素材与成片镜头');
+  if (sel.has('mua')) d.push('全程跟妆、换造型');
+  if (sel.has('director')) d.push('拍摄前策划方案与分镜脚本');
+  d.push(sel.has('rush') ? '24 小时出初选，3 天出精修' : '7 天出初选，15 天出精修');
+  return d;
+}
+function renderDeliverables(S) { $('deliv').innerHTML = deliverables(S).map(x => `<li>${x}</li>`).join(''); }
+
+/* ---------- poster + copy ---------- */
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+function openModal(title, node) { $('modalTitle').textContent = title; const b = $('modalBody'); b.innerHTML = ''; b.append(...node); $('modal').hidden = false; }
+$('modalClose').onclick = () => $('modal').hidden = true;
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').hidden = true; });
+$('copyBtn').onclick = () => {
+  const txt = quoteText();
+  navigator.clipboard?.writeText(txt).then(() => toast('报价单已复制'), () => showText(txt)) ?? showText(txt);
+};
+function showText(txt) { const ta = document.createElement('textarea'); ta.id = 'quoteText'; ta.value = txt; ta.readOnly = true; const p = document.createElement('p'); p.textContent = '复制没有成功，请手动全选下面的文字复制。'; openModal('报价单', [p, ta]); ta.select(); }
+$('posterBtn').onclick = () => {
+  const P = document.createElement('canvas'); P.width = 1080; P.height = 1500; const x = P.getContext('2d');
+  const tc = getComputedStyle(document.documentElement).getPropertyValue('--tier').trim() || '#ffb627';
+  const bg = x.createLinearGradient(0, 0, 0, 1500); bg.addColorStop(0, '#1a1e4a'); bg.addColorStop(1, '#07080f'); x.fillStyle = bg; x.fillRect(0, 0, 1080, 1500);
+  renderer.render(scene, cam);
+  const src = renderer.domElement, sw = src.width, sh = src.height, ar = 1080 / 860;
+  let cw = sw, ch = sw / ar; if (ch > sh) { ch = sh; cw = sh * ar; }
+  x.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 120, 1080, 860);
+  x.fillStyle = '#ffb627'; x.font = '700 30px "Chakra Petch", monospace'; x.fillText(BRAND, 60, 72);
+  x.fillStyle = '#eceaf7'; x.font = '44px "ZCOOL QingKe HuangYou", sans-serif'; x.textAlign = 'right'; x.fillText('摄影师装备舱', 1020, 76); x.textAlign = 'left';
+  const g2 = x.createLinearGradient(0, 760, 0, 980); g2.addColorStop(0, 'rgba(7,8,15,0)'); g2.addColorStop(1, 'rgba(7,8,15,1)'); x.fillStyle = g2; x.fillRect(0, 760, 1080, 220);
+  x.fillStyle = tc; x.font = '96px "ZCOOL QingKe HuangYou", sans-serif'; x.fillText($('tierName').textContent, 60, 960);
+  x.fillStyle = '#8d91b8'; x.font = '30px "Noto Sans SC", sans-serif'; x.fillText($('tierSub').textContent, 64, 1010);
+  x.fillStyle = '#eceaf7'; x.font = '700 64px "Chakra Petch", monospace'; x.textAlign = 'right'; x.fillText('战力 ' + (statSum(stats()) * 10).toLocaleString('zh-CN'), 1020, 960);
+  x.fillStyle = '#ffb627'; x.font = '700 44px "Chakra Petch", monospace'; x.fillText(yuan(total()), 1020, 1012); x.textAlign = 'left';
+  x.drawImage($('sample'), 60, 1060, 480, 300);
+  x.strokeStyle = '#262b52'; x.lineWidth = 2; x.strokeRect(60, 1060, 480, 300);
+  x.fillStyle = '#eceaf7'; x.font = '500 26px "Noto Sans SC", sans-serif';
+  const names = [...sel].map(id => GEAR_BY[id].name); let yy = 1080;
+  x.fillStyle = '#8d91b8'; x.font = '24px "Noto Sans SC", sans-serif'; x.fillText(`已装备 ${names.length} 件`, 580, yy + 10); yy += 48;
+  x.fillStyle = '#eceaf7'; x.font = '24px "Noto Sans SC", sans-serif';
+  names.slice(0, 9).forEach(n => { x.fillText('· ' + n, 580, yy); yy += 34; }); if (names.length > 9) x.fillText(`… 等 ${names.length} 件`, 580, yy);
+  x.fillStyle = '#8d91b8'; x.font = '24px "Noto Sans SC", sans-serif'; x.fillText('按配置出片 · 所见即所得', 60, 1440);
+  const img = new Image(); img.src = P.toDataURL('image/png'); img.alt = '战绩海报';
+  const p = document.createElement('p'); p.textContent = '长按图片（手机）或右键「图片另存为」（电脑）即可保存，发给客户或发朋友圈。';
+  openModal('战绩海报', [img, p]);
+};
+
+/* ---------- boot ---------- */
+$('brandName').textContent = BRAND;
+renderTabs(); renderList();
+function start(data = {}) {
+  window.__thumbs = makeThumbs(); renderList(window.__thumbs);
+  update(); tick(); loop();
+  const init = Array.isArray(data.sel) ? data.sel.filter(id => GEAR_BY[id]) : PRESETS.pro;
+  setTimeout(() => applySet(init), 500);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
