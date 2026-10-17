@@ -251,6 +251,45 @@ button:disabled { cursor: default; }
 .modal-box textarea { width: 100%; min-height: 260px; background: var(--bg); color: var(--fg); border: 1px solid var(--line-2); padding: 10px; font: 12.5px/1.6 var(--f-body); resize: vertical; }
 .photo-ph { aspect-ratio: 3 / 4; border: 1px dashed var(--line-2); display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
 
+/* mode switch, quantities, quote table */
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-2); }
+.seg button { background: transparent; border: 0; padding: 9px 6px; font-weight: 700; font-size: 14px; color: var(--muted); line-height: 1.3; }
+.seg button small { display: block; font-weight: 400; font-size: 11px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-btn { background: var(--panel-2); border: 1px solid var(--line); padding: 8px 14px; font-family: var(--f-num); font-size: 20px; font-weight: 700; min-width: 66px; }
+.chip-btn small { font-family: var(--f-body); font-size: 11px; font-weight: 400; margin-left: 2px; }
+.chip-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: rgba(242,169,0,.1); }
+.tog { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--line); padding: 10px 12px; }
+.tog i { flex: none; width: 42px; height: 24px; border-radius: 12px; background: var(--panel-3); position: relative; transition: background .2s; }
+.tog i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--fg); transition: transform .2s; }
+.tog[aria-pressed="true"] i { background: var(--accent); }
+.tog[aria-pressed="true"] i::after { transform: translateX(18px); background: var(--accent-ink); }
+.tog small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+.card.has-qty { grid-template-columns: 56px minmax(0,1fr); cursor: pointer; }
+.card[data-on="true"] { background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 20%, var(--panel-2)), var(--panel-2)); border-color: color-mix(in srgb, var(--rc) 60%, transparent); border-left-color: var(--rc); }
+.card[data-on="true"] .thumb::after { content: attr(data-n); position: absolute; right: 0; top: 0; min-width: 18px; height: 18px; padding: 0 3px; background: var(--rc); color: #111; font-size: 12px; font-weight: 900; display: grid; place-items: center; font-family: var(--f-num); }
+.c-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.c-foot .c-price { text-align: left; white-space: normal; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line-2); flex: none; }
+.qty button { width: 36px; height: 34px; background: transparent; border: 0; font-size: 20px; font-weight: 700; line-height: 1; }
+.qty button:disabled { opacity: .25; }
+.qty b { min-width: 24px; text-align: center; font-family: var(--f-num); font-size: 19px; }
+.en { color: var(--muted); font-family: var(--f-num); font-size: 12.5px; font-weight: 500; }
+.incl { display: flex; flex-wrap: wrap; gap: 4px; }
+.incl span { font-size: 12px; border: 1px solid rgba(141,185,111,.45); color: var(--good); padding: 0 7px; }
+.qt { border: 1px solid var(--line); background: var(--panel-2); }
+.qt-row { display: grid; grid-template-columns: 22px minmax(0,1fr) auto; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); align-items: baseline; font-size: 13px; }
+.qt-row .no { font-family: var(--f-num); color: var(--muted); font-size: 12px; }
+.qt-row small { display: block; color: var(--muted); font-size: 11.5px; }
+.qt-row .amt { font-family: var(--f-num); font-size: 16px; font-weight: 700; text-align: right; white-space: nowrap; }
+.qt-sum { padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+.upper { font-size: 12px; color: var(--muted); }
+.day { display: grid; grid-template-columns: 58px minmax(0,1fr) auto; gap: 8px; font-size: 12.5px; padding: 6px 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.day b { font-family: var(--f-num); font-size: 14px; }
+.day em { font-style: normal; color: var(--muted); }
+.ref { font-size: 11.5px; color: var(--muted); }
+
 @media (min-width: 900px) {
   .app { grid-template-columns: minmax(0, 1fr) 440px; grid-template-rows: auto minmax(0, 1fr) auto; }
   .top { grid-column: 1 / -1; }
@@ -476,6 +515,71 @@ function drone() {
   g.userData.rotors = rotors; return g;
 }
 
+/* ---------- 活动直播器材模型 ---------- */
+const M2 = { panel: mat(0x2b2d31, { roughness: .5, metalness: .4 }), green: mat(0x1d9a48, { roughness: .95, metalness: 0, side: THREE.DoubleSide }), table: mat(0x3a3b3d, { roughness: .8, metalness: .1 }), vlock: mat(0x6b6e73, { roughness: .4, metalness: .6 }), ptz: mat(0xe9e9e6, { roughness: .35, metalness: .1 }) };
+const multiTex = canvasTex(256, 160, (c, w, h) => { c.fillStyle = '#05070a'; c.fillRect(0, 0, w, h); const cols = ['#2b4a7a', '#7a4a2b', '#2b7a5a', '#5a2b7a', '#7a2b3a', '#3a6a7a', '#6a6a2b', '#2b3a7a']; for (let i = 0; i < 8; i++) { const x = (i % 4) * w / 4, y = Math.floor(i / 4) * h / 2; c.fillStyle = cols[i]; c.fillRect(x + 3, y + 3, w / 4 - 6, h / 2 - 6); } c.lineWidth = 3; c.strokeStyle = '#e33'; c.strokeRect(3, 3, w / 4 - 6, h / 2 - 6); c.strokeStyle = '#3d3'; c.strokeRect(w / 4 + 3, 3, w / 4 - 6, h / 2 - 6); });
+const editTex = canvasTex(256, 160, (c, w, h) => { c.fillStyle = '#1c1d22'; c.fillRect(0, 0, w, h); c.fillStyle = '#3a6ea8'; c.fillRect(8, 8, w * .55, h * .5); c.fillStyle = '#2a2b30'; c.fillRect(0, h * .62, w, h * .38); [['#5b8fd6', 0], ['#5bd68f', 1], ['#d6a25b', 2]].forEach(([col, i]) => { for (let x = 6; x < w; x += 30 + i * 9) { c.fillStyle = col; c.fillRect(x, h * .66 + i * 17, 22 + i * 6, 12); } }); c.fillStyle = '#e33'; c.fillRect(w * .4, h * .62, 2, h * .38); });
+const beautyTex = canvasTex(256, 160, (c, w, h) => { c.fillStyle = '#16171c'; c.fillRect(0, 0, w, h); const g = c.createRadialGradient(80, 70, 5, 80, 70, 60); g.addColorStop(0, '#f3d3bd'); g.addColorStop(1, '#3a2f2c'); c.fillStyle = g; c.fillRect(10, 10, 140, 120); c.fillStyle = '#ccc'; c.font = 'bold 14px sans-serif'; c.fillText('vMix 美颜', 160, 28); ['磨皮', '美白', '瘦脸'].forEach((t, i) => { c.fillStyle = '#888'; c.fillText(t, 160, 58 + i * 26); c.fillStyle = '#333'; c.fillRect(200, 50 + i * 26, 46, 6); c.fillStyle = '#f2a900'; c.fillRect(200, 50 + i * 26, 20 + i * 8, 6); }); });
+const screenPlane = (w, h, tex) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+function monitor(w, h, tex) { return grp(box(w + .02, h + .02, .025, M.black), at(screenPlane(w, h, tex), 0, 0, .013), at(cyl(.012, .012, .16, M.black, 8), 0, -h / 2 - .08, -.01), box(.16, .01, .1, M.black, 0, -h / 2 - .16, -.01)); }
+function table(w, d, h = .75) { const g = grp(box(w, .03, d, M2.table, 0, h, 0)); for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(cyl(.015, .015, h, M.metal, 8), sx * (w / 2 - .05), h / 2, sz * (d / 2 - .05))); return g; }
+function laptop(tex) { const g = grp(box(.31, .015, .22, M.silver)); const lid = new THREE.Group(); lid.position.set(0, .008, -.11); lid.rotation.x = -.28; lid.add(at(box(.31, .21, .006, M.silver), 0, .105, 0), at(screenPlane(.28, .18, tex), 0, .105, .004)); g.add(lid); return g; }
+function videoTripod(h) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3 + .5; g.add(rod(V(0, h, 0), V(Math.cos(a) * .45, 0, Math.sin(a) * .45), .014, M.black), rod(V(Math.cos(a) * .06, h * .3, Math.sin(a) * .06), V(Math.cos(a) * .3, h * .33, Math.sin(a) * .3), .006, M.metal)); }
+  g.add(at(box(.1, .07, .12, M.body), 0, h + .035, 0), rod(V(0, h + .05, -.05), V(-.1, h - .03, -.48), .011, M.black));
+  return g;
+}
+function fx6Body() {   // Sony FX6：机身 + 提手 + 侧屏 + V 口电池 + 镜头
+  const g = grp(box(.116, .114, .153, M.body), box(.012, .04, .012, M.metal, 0, .077, -.04), box(.012, .04, .012, M.metal, 0, .077, .05), box(.02, .02, .15, M.black, 0, .1, .005), at(fwd(cyl(.014, .014, .05, M.black, 12)), 0, .12, .08), box(.095, .13, .04, M2.vlock, 0, 0, -.096), box(.09, .056, .012, M.black, -.09, .09, .05), at(screenPlane(.08, .046, screenTex), -.09, .09, .057));
+  const l = lensFwd(.14, .046); l.position.set(0, 0, .077); g.add(l); return g;
+}
+function fx6Rig() { const g = videoTripod(1.3), b = fx6Body(); b.position.y = 1.3 + .07 + .057; g.add(b); return g; }
+function fs5Body() {
+  const g = grp(box(.1, .1, .17, M.body), box(.035, .1, .05, M.rubber, .068, -.01, .05), box(.016, .016, .13, M.black, 0, .075, 0), box(.012, .03, .012, M.metal, 0, .06, -.05), box(.012, .03, .012, M.metal, 0, .06, .05), box(.07, .045, .01, M.black, -.03, .065, .09));
+  const l = lensFwd(.11, .04); l.position.set(0, 0, .085); g.add(l); return g;
+}
+function fs5Rig() { const g = videoTripod(1.55), b = fs5Body(); b.position.y = 1.55 + .07 + .05; g.add(b); return g; }
+function gimbalUnit() {
+  const g = grp(rod(V(0, 0, 0), V(.12, .01, .06), .008, M.black), rod(V(0, 0, 0), V(-.1, .01, .08), .008, M.black), rod(V(0, 0, 0), V(0, .01, -.12), .008, M.black), at(cyl(.02, .02, .26, M.black), 0, .14, 0), at(cyl(.03, .03, .04, M.body), 0, .29, 0), box(.012, .14, .012, M.metal, .08, .36, 0), box(.09, .012, .012, M.metal, .04, .43, 0), at(cyl(.022, .022, .02, M.red, 16), .08, .3, 0));
+  const c = cameraBody(); c.scale.setScalar(.85); c.position.set(0, .38, 0); g.add(c); return g;
+}
+function roamRig() { const g = grp(box(.5, .2, .32, M.case, 0, .1, 0), box(.52, .015, .34, mat(0x0e0e0f), 0, .2, 0)); const u = gimbalUnit(); u.position.set(-.08, .205, 0); g.add(u); return g; }
+function txKit() { return grp(box(.095, .14, .045, M2.vlock, 0, .07, 0), box(.07, .006, .03, M.orange, 0, .1, .024), box(.08, .035, .1, M.black, 0, .158, -.01), rod(V(-.03, .17, -.05), V(-.03, .3, -.06), .005, M.black), rod(V(.03, .17, -.05), V(.03, .3, -.06), .005, M.black)); }
+function photoKit() { const g = table(.7, .45, .72); const lp = laptop(multiTex); lp.position.set(-.12, .743, -.02); g.add(lp); const c = cameraBody(); c.position.set(.2, .79, .05); c.rotation.y = -.6; g.add(c, box(.06, .02, .05, M.black, .2, .745, -.14)); return g; }
+const DIRECTOR_LOOK = { hair: 'cap', hairColor: 0x1d1611, skin: 0xf0d8c8, height: 1, outfit: 0x2f3136 }, EDITOR_LOOK = { hair: 'long', hairColor: 0x2a1a12, skin: 0xffffff, height: 1, outfit: 0x4a4036 };
+function deskPerson(look) { if (!personTemplate) return null; const p = softPerson(personTemplate, look, look.outfit, 0x24262a); p.scale.setScalar(.97); p.position.z = -.6; return p; }
+function directorDesk() {  // 导播台 BMD 4K 2 M/E + 多画面监看 + 导演
+  const g = table(1.4, .65), panel = box(.78, .05, .28, M2.panel, 0, .79, .02); g.add(panel);
+  const cols = [0xd23b3b, 0x3bb85a, 0xdddddd];
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 10; i++) g.add(box(.03, .012, .03, mat(i === 2 + r ? cols[r] : 0x55575c, { roughness: .4, emissive: i === 2 + r ? cols[r] : 0, emissiveIntensity: .6 }), -.3 + i * .05, .82, -.07 + r * .055));
+  g.add(box(.03, .09, .03, M.black, .34, .86, .02));
+  for (const x of [-.36, .36]) { const m = monitor(.5, .3, multiTex); m.position.set(x, .765 + .16 + .16, .2); m.rotation.y = Math.PI; g.add(m); }
+  const p = deskPerson(DIRECTOR_LOOK); if (p) g.add(p); return g;
+}
+function editDesk() {      // 剪辑台：MacBook + 外接屏 + 剪辑师
+  const g = table(1.1, .6); const lp = laptop(editTex); lp.position.set(-.18, .773, 0); lp.rotation.y = Math.PI; g.add(lp);
+  const m = monitor(.45, .27, editTex); m.position.set(.25, .765 + .16 + .14, .15); m.rotation.y = Math.PI; g.add(m);
+  const p = deskPerson(EDITOR_LOOK); if (p) g.add(p); return g;
+}
+function vmixPC() { const g = table(.55, .45); g.add(box(.2, .42, .42, M.body, .1, .21, 0), box(.004, .3, .01, new THREE.MeshBasicMaterial({ color: 0x35d07f }), -.002, .25, .21)); const m = monitor(.4, .24, beautyTex); m.position.set(0, .765 + .16 + .12, 0); g.add(m); return g; }
+function ptzStand() { const g = stand(1.9), pan = new THREE.Group(); pan.position.y = 1.96; g.add(box(.13, .05, .13, M2.ptz, 0, 1.935, 0), pan); pan.add(box(.018, .1, .06, M2.ptz, -.055, .05, 0), box(.018, .1, .06, M2.ptz, .055, .05, 0), box(.09, .09, .12, M2.ptz, 0, .07, 0), at(fwd(cyl(.028, .028, .01, M.glass)), 0, .07, .061)); g.userData.pan = pan; return g; }
+function greenScreen() {
+  const g = grp(rod(V(-1.35, 0, 0), V(-1.35, 2.3, 0), .016, M.silver), rod(V(1.35, 0, 0), V(1.35, 2.3, 0), .016, M.silver), rod(V(-1.38, 2.3, 0), V(1.38, 2.3, 0), .014, M.silver));
+  for (const x of [-1.35, 1.35]) g.add(rod(V(x - .3, .01, 0), V(x + .3, .01, 0), .012, M.silver), rod(V(x, .01, -.3), V(x, .01, .3), .012, M.silver));
+  const cloth = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.1, 20, 1), M2.green); cloth.position.set(0, 1.22, .02); cloth.receiveShadow = true;
+  const pos = cloth.geometry.attributes.position; for (let i = 0; i < pos.count; i++) pos.setZ(i, Math.sin(pos.getX(i) * 6) * .015); cloth.geometry.computeVertexNormals();
+  const floorPiece = new THREE.Mesh(new THREE.PlaneGeometry(2.6, .7), M2.green); floorPiece.rotation.x = -Math.PI / 2; floorPiece.position.set(0, .006, .36); floorPiece.receiveShadow = true;
+  g.add(cloth, floorPiece); return g;
+}
+function ledPanel() { const g = stand(1.5), head = new THREE.Group(); head.position.y = 1.72; head.rotation.x = .2; g.add(head); head.add(box(.34, .34, .05, M.body), at(new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), new THREE.MeshBasicMaterial({ color: 0xfff1dc, toneMapped: false })), 0, 0, .026), rod(V(-.19, -.17, 0), V(-.19, -.22, 0), .008, M.silver), rod(V(.19, -.17, 0), V(.19, -.22, 0), .008, M.silver), box(.4, .012, .012, M.silver, 0, -.22, 0)); return g; }
+function walkie() { return grp(box(.055, .12, .035, M.black), at(cyl(.008, .006, .1, M.black, 8), .015, .11, 0), box(.04, .03, .002, M.glass, 0, .025, .018), at(cyl(.008, .008, .012, M.orange, 10), -.015, .066, 0)); }
+function headset() {
+  const band = new THREE.Mesh(new THREE.TorusGeometry(.122, .009, 8, 32, Math.PI), M.black); band.position.set(0, .1, .005);
+  const g = grp(band); for (const sx of [-1, 1]) g.add(at(cyl(.036, .036, .028, M.body, 20), sx * .122, .1, .005, 0, 0, Math.PI / 2));
+  g.add(rod(V(.12, .09, .02), V(.045, .015, .115), .005, M.black), at(sph(.012, M.black), .045, .015, .115)); return g;
+}
+
 /* ---------- hair & look ---------- */
 function hairGroup(look) {
   const g = new THREE.Group(); g.name = 'look-hair';
@@ -586,6 +690,49 @@ const ITEMS = [
   { id: 'album', cat: 'service', name: '精装相册 20P', model: '实体相册 · 包邮到家', r: 'pro', price: 299, st: { s: 6 }, glyph: '册', pos: [-.95, .3, .82], rot: [0, .55, 0],
     build: () => grp(box(.3, .035, .3, mat(0x5a3b2a, { roughness: .8 })), box(.29, .03, .29, M.white, 0, -.002, 0)) },
 ];
+/* =====================================================================
+   活动 · 会议直播（按人天计费）
+   价格参考：光感影视｜十月活动设备与服务报价（2026.09.29 v1，未税）
+   bill 计费方式：perDay 人天（彩排算半天）/ showDay 只算活动日 / fullDay 整天（彩排算 1 天）/ once 一次性
+   ref：十月活动用的数量；slots：3D 场景里的摆放位置 [x, z, y]
+   ===================================================================== */
+const EVENT_DAYS = [1, 2, 3, 4];
+const EVENT_TAX = .01;
+const faceTo = (x, z, tx = 0, tz = 0) => Math.atan2(tx - x, tz - z);
+const ROAM_SLOTS = [[-1.0, 1.4], [1.0, 1.4], [-2.35, -.45], [2.35, -.45]];
+const EV_ITEMS = [
+  { id: 'ev_director', grp: 'crew', name: '现场导演 / 导播', en: 'Live Director / Switcher', desc: '机位调度、画面切换、大屏输出；含 4K 导播台、监看及信号切换', r: 'top', price: 2000, bill: 'perDay', unit: '人', max: 1, ref: 1, st: { v: 12, s: 14 }, slots: [[2.5, -1.8]], build: () => directorDesk() },
+  { id: 'ev_fixed', grp: 'crew', name: '固定直播机位', en: 'Sony FX6', desc: '主讲人、舞台、会场固定画面；每台配 1 名摄像师', r: 'pro', price: 1500, bill: 'perDay', unit: '人', max: 4, ref: 3, st: { v: 12, q: 6 }, slots: [[-1.9, .35], [1.9, .35], [-1.5, -1.5], [1.5, -1.5]], build: () => fx6Rig() },
+  { id: 'ev_roam', grp: 'crew', name: '游动直播机位', en: 'Sony α7 IV / α7S III / FX3', desc: '现场游动直播，按任务抽调拍花絮；每套含相机、镜头、稳定器', r: 'pro', price: 1500, bill: 'perDay', unit: '人', max: 4, ref: 3, st: { v: 10, a: 6 }, slots: ROAM_SLOTS, build: () => roamRig() },
+  { id: 'ev_photo', grp: 'crew', name: '照片直播', en: 'Live Photo Delivery', desc: '含照片相机、镜头及现场上传设备；彩排日不到场', r: 'adv', price: 1500, bill: 'showDay', unit: '人', max: 3, ref: 2, st: { q: 10, s: 6 }, slots: [[-2.1, 1.65], [2.1, 1.65], [0, 2.5]], build: () => photoKit() },
+  { id: 'ev_editor', grp: 'crew', name: '驻场剪辑', en: 'On-site Editing', desc: '素材整理、现场花絮剪辑、播放文件检查；含剪辑工作站', r: 'adv', price: 1500, bill: 'showDay', unit: '人', max: 1, ref: 1, st: { v: 8, s: 8 }, slots: [[-2.5, -1.8]], build: () => editDesk() },
+  { id: 'ev_overnight', grp: 'crew', name: '夜间快剪', en: 'Overnight Highlight Editing', desc: '当晚剪出前几天的花絮片，第二天会上播放', r: 'adv', price: 1500, bill: 'once', unit: '次', max: 3, ref: 1, st: { v: 6, s: 8 }, glyph: '剪' },
+  { id: 'ev_tx', grp: 'gear', name: '图传 + V 口电池', en: 'Wireless Video & V-mount Kit', desc: '游动机位无线回传；每台游动机位配 1 套', r: 'adv', price: 200, bill: 'once', unit: '套', max: 4, ref: 3, st: { v: 4 }, slots: ROAM_SLOTS.map(([x, z]) => [x, z, .21]), offset: [.16, 0], build: () => txKit() },
+  { id: 'ev_ptz', grp: 'gear', name: '舞台返看云台机', en: 'Compact PTZ Camera', desc: '固定拍舞台，输出到返看电视；含安装及传输', r: 'adv', price: 500, bill: 'fullDay', unit: '套', max: 1, ref: 1, st: { v: 6 }, slots: [[3.0, .6]], build: () => ptzStand(), anim: (o, t) => { if (o.userData.pan) o.userData.pan.rotation.y = Math.sin(t * .4) * .7; } },
+  { id: 'ev_vmix', grp: 'gear', name: 'vMix 美颜系统', en: 'vMix Beauty System', desc: '直播画面实时美颜；彩排联调按半天计', r: 'adv', price: 300, bill: 'perDay', unit: '套', max: 1, ref: 1, st: { q: 6, m: 4 }, slots: [[3.2, -.75]], build: () => vmixPC() },
+  { id: 'ev_green', grp: 'gear', name: '绿幕背景', en: 'Green Screen', desc: '采访背景，含运送及搭建', r: 'adv', price: 200, bill: 'once', unit: '套', max: 1, ref: 1, st: { m: 8 }, slots: [[0, -3.0]], build: () => greenScreen() },
+  { id: 'ev_light', grp: 'gear', name: '采访灯光', en: 'Interview Lights', desc: '含运送、搭建及基础调试', r: 'adv', price: 200, bill: 'once', unit: '盏', max: 3, ref: 3, st: { l: 8 }, slots: [[-1.05, -1.95], [1.05, -1.95], [0, -1.6]], aim: [0, -2.7], build: () => ledPanel() },
+  { id: 'ev_album', grp: 'gear', name: '直播相册', en: 'Live Photo Album', desc: '活动期间照片直播相册服务', r: 'adv', price: 300, bill: 'once', unit: '项', max: 1, ref: 1, st: { s: 8 }, glyph: '相' },
+];
+// 已包含、不单独收费的项目（when：什么条件下出现）
+const EV_FREE = [
+  { id: 'evf_lead', name: '现场制作总监', note: '现场总对接、人员设备统筹', when: q => true },
+  { id: 'evf_switcher', name: '4K 导播台 BMD 4K 2 M/E', note: '含在导播服务', when: q => q.ev_director > 0 },
+  { id: 'evf_fs5', name: 'Sony FS5 辅助全景机', note: '供后台监看，由固定机位摄像师兼管', when: q => q.ev_fixed > 0 },
+  { id: 'evf_mic', name: '无线麦克风', note: '采访收音', when: q => true },
+  { id: 'evf_drone', name: '大疆御系列航拍', note: '按现场需要配合拍摄', when: q => q.ev_fixed + q.ev_roam > 0 },
+  { id: 'evf_mac', name: 'MacBook 剪辑工作站', note: '含在驻场剪辑', when: q => q.ev_editor > 0 },
+];
+const EV_LOOK = { hair: 'short', hairColor: 0x1a1410, height: 1.0, skin: 0xf3ddd0, outfit: 0x1d1f22 };   // 现场制作总监
+const EV_REF = { days: 3, reh: true, tax: false, q: Object.fromEntries(EV_ITEMS.map(i => [i.id, i.ref])) };   // 十月活动：¥58,250
+const FREE_3D = {
+  lead_walkie: { id: 'lead_walkie', name: '对讲机', r: 'base', bone: 'RightHand', pos: 'cam', build: () => walkie(), priceLabel: '已含' },
+  lead_headset: { id: 'lead_headset', name: '导播耳机', r: 'base', bone: 'Head', pos: 'head', build: () => headset(), priceLabel: '已含' },
+  lead_mic: { id: 'lead_mic', name: '无线麦克风', r: 'base', bone: 'Spine2', pos: [.075, 1.47, .125], build: () => ITEMS.find(i => i.id === 'mic').build(), priceLabel: '已含' },
+  evf_fs5: { id: 'evf_fs5', name: 'Sony FS5 辅助全景机', r: 'base', pos: [-3.05, 0, -.5], rot: [0, faceTo(-3.05, -.5), 0], build: () => fs5Rig(), priceLabel: '已含' },
+  evf_drone: { id: 'evf_drone', name: '大疆御系列航拍', r: 'base', pos: [.8, 2.35, .7], build: () => drone(), anim: (o, t) => { o.position.y = 2.35 + Math.sin(t * 1.3) * .05; }, priceLabel: '已含' },
+};
+const EV_BY = Object.fromEntries(EV_ITEMS.map(i => [i.id, i]));
 const BY = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 const DUR_BY = Object.fromEntries(DURATIONS.map(d => [d.id, d]));
 const PG_BY = Object.fromEntries(PHOTOGRAPHERS.map(p => [p.id, p]));
@@ -597,6 +744,12 @@ const PRESETS = [
   { id: 'std', name: '写真标准', note: '最多人选', dur: 'h2', pg: 'p2', svc: 'std', body: 'body_a74', items: ['lens_85', 'speedlight'] },
   { id: 'adv', name: '旅拍进阶', note: '有团队', dur: 'h4', pg: 'p3', svc: 'butler', body: 'body_a7r5', items: ['lens_35', 'lens_85', 'lens_135', 'lens_1635', 'speedlight', 'ledstick', 'backpack', 'tripod', 'gopro', 'mic', 'assistant', 'mua', 'wardrobe', 'retouch10'] },
   { id: 'max', name: '大片满配', note: '全都要', dur: 'h8', pg: 'p4', svc: 'butler', body: 'body_x2d', items: OPTIONAL.map(i => i.id) },
+];
+const STEPS_EVENT = [
+  { id: 'evdays', title: '活动天数', hint: '正式活动几天？要不要提前半天进场彩排？岗位按人天计费。', need: '先选天数' },
+  { id: 'evcrew', grp: 'crew', title: '拍摄岗位', hint: '岗位费用已包含对应设备。十月活动参考：3 固定 + 3 游动 + 2 照片直播。' },
+  { id: 'evgear', grp: 'gear', title: '直播 · 现场设备', hint: '导播台、FS5 全景机、无线麦、航拍、剪辑工作站已经包含。' },
+  { id: 'evdone', title: '确认报价', hint: '未税报价，需要开票加 1%。复制发给对接人即可。' },
 ];
 const STEPS = [
   { id: 'dur', title: '拍多久', hint: '先定时长。选好后，标配相机和 24-70 镜头会马上装到摄影师手上。', need: '先选时长' },
@@ -707,8 +860,8 @@ controls.minDistance = 1.4; controls.maxDistance = 7; controls.maxPolarAngle = M
 controls.autoRotate = !reduce; controls.autoRotateSpeed = .5;
 scene.add(new THREE.HemisphereLight(0xdfe6ee, 0x3a3631, .55));
 const key = new THREE.DirectionalLight(0xfff1de, 2.4); key.position.set(2.5, 4.2, 3); key.castShadow = true;
-key.shadow.mapSize.set(1536, 1536); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4;
-Object.assign(key.shadow.camera, { left: -2.6, right: 2.6, top: 2.8, bottom: -1, near: .5, far: 12 }); scene.add(key);
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4;
+Object.assign(key.shadow.camera, { left: -4.2, right: 4.2, top: 4, bottom: -3.6, near: .5, far: 14 }); scene.add(key);
 const fill = new THREE.DirectionalLight(0xbcd0ff, .5); fill.position.set(-3, 2, -1.5); scene.add(fill);
 
 const concrete = canvasTex(512, 512, (c, w, h) => { c.fillStyle = '#5b5c5c'; c.fillRect(0, 0, w, h); const img = c.getImageData(0, 0, w, h); for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - .5) * 26; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; } c.putImageData(img, 0, 0); c.globalAlpha = .08; for (let i = 0; i < 40; i++) { c.fillStyle = Math.random() > .5 ? '#000' : '#fff'; c.beginPath(); c.arc(Math.random() * w, Math.random() * h, 10 + Math.random() * 60, 0, 7); c.fill(); } c.globalAlpha = .2; c.strokeStyle = '#2c2d2d'; c.lineWidth = 2; c.strokeRect(0, 0, w, h); }, 8);
@@ -771,6 +924,7 @@ let clockT = 0, lastActivity = -10;
 const kick = V(0, 0, 0); let fovPunch = 0;
 function worldTarget(def) {
   if (def.pos === 'cam') return HAND.clone();
+  if (def.pos === 'head') return bones.Head ? bones.Head.getWorldPosition(V(0, 0, 0)) : V(0, 1.64, 0);
   if (def.pos === 'flash') { const top = { body_gfx: .094, body_x2d: .078 }[state.body] ?? .074; return HAND.clone().add(V(-.004, top * figScale, -.004)); }
   const p = V(...def.pos); return def.bone ? p.multiplyScalar(figScale) : p;
 }
@@ -789,11 +943,13 @@ function equip(def, opts = {}) {
   live.set(def.id, { def, obj, state: 'drop', t0: now(), dur: reduce ? .01 : (def.person ? .22 : .15), tgt, from: obj.position.clone(), s0, ground, quiet: opts.quiet });
   lastActivity = clockT;
 }
-function unequip(id) {
+function unequip(id, quiet) {
   const it = live.get(id); if (!it || it.state === 'out') return;
   scene.attach(it.obj); it.state = 'out'; it.t0 = now(); it.dur = reduce ? .01 : .16; it.s1 = it.obj.scale.x;
-  puff(it.obj.getWorldPosition(V(0, 0, 0)), false, 0x9a968c); Snd.remove();
+  if (!quiet) { puff(it.obj.getWorldPosition(V(0, 0, 0)), false, 0x9a968c); Snd.remove(); }
 }
+// 挂到骨骼前先回到基础姿势，避免呼吸、转头时挂歪
+function resetPose() { for (const n of ['Spine', 'Spine1', 'Head']) if (bones[n] && baseQ[n]) bones[n].quaternion.copy(baseQ[n]); fig.updateMatrixWorld(true); }
 const bursts = [], rings = [];
 function puff(p, ground, color = 0xb9b4a8) {
   const n = ground ? 30 : 16, pos = new Float32Array(n * 3), vel = [];
@@ -823,7 +979,7 @@ function impact(def, p) {
   stage.classList.remove('hit'); void stage.offsetWidth; stage.classList.add('hit');
   const v = p.clone().project(cam), x = (v.x + 1) / 2 * 100, y = (1 - v.y) / 2 * 100;
   const fl = document.getElementById('flash'); fl.style.background = `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,.9), ${RCOL[def.r]}55 18%, transparent 45%)`; fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
-  floatText(p, def.price ? '+¥' + def.price : (def.locked || def.r === 'base' ? '已含' : '赠送'), def.name, RCOL[def.r]);
+  floatText(p, def.priceLabel ?? (def.price ? '+¥' + def.price : (def.locked || def.r === 'base' ? '已含' : '赠送')), def.name, RCOL[def.r]);
   Snd.impact(lv); buzz(lv >= 2 ? [14, 40, 22] : 16);
 }
 function floatText(p, big, small, col) {
@@ -842,7 +998,7 @@ function updateItems(dt) {
       const e = easeIn(u); obj.position.lerpVectors(it.from, it.tgt, e); obj.scale.setScalar(it.s0 + (1 - it.s0) * e);
       if (u >= 1) {
         it.state = 'settle'; it.t0 = tn; it.dur = .28; obj.position.copy(it.tgt);
-        const b = def.bone && bones[def.bone]; if (b) b.attach(obj);
+        const b = def.bone && bones[def.bone]; if (b) { resetPose(); b.attach(obj); }
         if (!it.quiet) impact(def, obj.getWorldPosition(V(0, 0, 0)).add(V(0, it.ground ? .5 : 0, 0)));
         else { Snd.impact(0); puff(obj.getWorldPosition(V(0, 0, 0)), it.ground); }
       }
@@ -868,6 +1024,12 @@ const setPtr = e => { const r = canvas.getBoundingClientRect(); ptr.set((e.clien
 canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 canvas.addEventListener('pointerup', e => { if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return; setPtr(e); if (ray.intersectObject(gearCase, true).length) { lastActivity = clockT; Snd.tap(); if (state.dur) goStep(2); } });
 
+let camAnim = null;
+function moveCam(mode) {
+  const ev = mode === 'event';
+  camAnim = { s: now(), p0: cam.position.clone(), t0: controls.target.clone(), p1: ev ? V(4.4, 3.2, 6.5) : V(1.6, 1.5, 3.7), t1: ev ? V(0, .8, -.5) : V(0, 1, 0) };
+  controls.maxDistance = ev ? 11 : 7; scene.fog.near = ev ? 9 : 6; scene.fog.far = ev ? 22 : 14;
+}
 const clock = new THREE.Clock(), AX = V(1, 0, 0), AY = V(0, 1, 0), AZ = V(0, 0, 1);
 function loop() {
   const dt = Math.min(clock.getDelta(), .05); clockT += dt; const t = clockT;
@@ -893,6 +1055,7 @@ function loop() {
     if (!r.flat) r.m.quaternion.copy(cam.quaternion);
     if (k >= 1) { scene.remove(r.m); r.m.geometry.dispose(); rings.splice(i, 1); }
   }
+  if (camAnim) { const u = Math.min(1, (now() - camAnim.s) / .9), e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; cam.position.lerpVectors(camAnim.p0, camAnim.p1, e); controls.target.lerpVectors(camAnim.t0, camAnim.t1, e); if (u >= 1) camAnim = null; }
   controls.update();
   if (kick.lengthSq() > 1e-7 || fovPunch > .01) {
     cam.position.add(kick); kick.multiplyScalar(-.55);
@@ -902,25 +1065,28 @@ function loop() {
 }
 
 /* ---------- thumbnails rendered from the real models ---------- */
-function makeThumbs() {
+const THUMB_TOP = new Set(['ev_fixed', 'evf_fs5', 'ev_ptz', 'ev_light', 'ledstick', 'ad600', 'insta360', 'gimbal', 'ev_roam']);
+function makeThumbs(size = 128) {
   const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  r.setSize(128, 128); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.5;
+  r.setSize(size, size); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.5;
   const s = new THREE.Scene(); s.environment = scene.environment;
   s.add(new THREE.HemisphereLight(0xffffff, 0x555555, 2)); const d = new THREE.DirectionalLight(0xffffff, 3); d.position.set(2, 3, 4); s.add(d);
   const c = new THREE.PerspectiveCamera(30, 1, .01, 50), out = {};
-  for (const def of ITEMS) {
+  for (const def of [...ITEMS, ...EV_ITEMS, FREE_3D.evf_fs5]) {
     const o = def.id === 'lens_2470' ? lensFwd(.12, .042) : buildItem(def);
-    if (!o) { out[def.id] = glyphIcon(def.glyph || def.name[0]); continue; }
-    o.rotation.y = def.cat === 'body' || def.id === 'lens_2470' || def.id === 'fx3' ? -.6 : def.id === 'reflector' ? .4 : -.5;
+    if (!o) { out[def.id] = glyphIcon(def.glyph || def.name[0], size); continue; }
+    o.rotation.y = def.cat === 'body' || def.id === 'lens_2470' || def.id === 'fx3' ? -.6 : def.id === 'reflector' ? .4 : /desk|director|editor|vmix|photo/.test(def.id) ? .5 : -.5;
     s.add(o); o.updateMatrixWorld(true);
-    const b = new THREE.Box3().setFromObject(o), ctr = b.getCenter(V(0, 0, 0)), size = b.getSize(V(0, 0, 0)).length();
-    const dist = size / (2 * Math.tan(15 * Math.PI / 180)) * .8;
+    const b = new THREE.Box3().setFromObject(o); if (THUMB_TOP.has(def.id)) b.min.y = Math.max(b.min.y, b.max.y - .75);   // 高的灯架、三脚架只拍上半部分
+    const ctr = b.getCenter(V(0, 0, 0)), span = b.getSize(V(0, 0, 0)).length();
+    const dist = span / (2 * Math.tan(15 * Math.PI / 180)) * .8;
     c.position.copy(ctr).add(V(.7, .4, 1).normalize().multiplyScalar(dist)); c.lookAt(ctr); c.near = dist / 30; c.far = dist * 5; c.updateProjectionMatrix();
     r.render(s, c); out[def.id] = r.domElement.toDataURL('image/png'); s.remove(o);
   }
   r.dispose(); r.forceContextLoss?.(); return out;
 }
-function glyphIcon(ch) {
+window.gearRenders = size => makeThumbs(size);   // 导出器材渲染图用
+function glyphIcon(ch, size = 128) {
   const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
   x.strokeStyle = 'rgba(232,229,220,.5)'; x.lineWidth = 4; x.strokeRect(22, 22, 84, 84);
   x.fillStyle = '#e8e5dc'; x.font = '900 52px "Noto Sans SC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, 64, 68);
@@ -930,48 +1096,53 @@ function glyphIcon(ch) {
 /* =====================================================================
    状态与界面
    ===================================================================== */
-const state = { step: 0, dur: null, pg: null, svc: 'std', body: 'body_a74', items: new Set(), visited: 0 };
+const state = { mode: 'travel', step: 0, dur: null, pg: null, svc: 'std', body: 'body_a74', items: new Set(), visited: 0, ev: { days: 0, reh: true, tax: false, q: {} } };
+const steps = () => state.mode === 'event' ? STEPS_EVENT : STEPS;
 const $ = id => document.getElementById(id);
 const yuan = n => '¥' + Math.round(n).toLocaleString('zh-CN');
+const yuanX = n => '¥' + (+n).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 const has = id => state.items.has(id);
 let thumbs = {}, started = false;
 
 /* ---------- 步骤 ---------- */
-$('stepper').innerHTML = STEPS.map((s, i) => `<button type="button" data-i="${i}" aria-label="第 ${i + 1} 步 ${s.title}"></button>`).join('');
+function buildStepper() { $('stepper').style.gridTemplateColumns = `repeat(${steps().length}, 1fr)`; $('stepper').innerHTML = steps().map((s, i) => `<button type="button" data-i="${i}" aria-label="第 ${i + 1} 步 ${s.title}"></button>`).join(''); }
+buildStepper();
 $('stepper').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; const i = +b.dataset.i; if (i <= state.visited) goStep(i); });
-function canLeave(i) { return !(i === 0 && !state.dur) && !(i === 1 && !state.pg); }
+function canLeave(i) { if (state.mode === 'event') return !(i === 0 && !state.ev.days); return !(i === 0 && !state.dur) && !(i === 1 && !state.pg); }
 function goStep(i) {
-  if (i > state.step) for (let k = state.step; k < i; k++) if (!canLeave(k)) { toast(STEPS[k].need); i = k; break; }
+  if (i > state.step) for (let k = state.step; k < i; k++) if (!canLeave(k)) { toast(steps()[k].need); i = k; break; }
   if (i === state.step) { renderStep(); return; }
   state.step = i; state.visited = Math.max(state.visited, i); Snd.step();
   renderStep(true); $('sheet').scrollTop = 0;
 }
 $('backBtn').onclick = () => { if (state.step > 0) goStep(state.step - 1); };
-$('nextBtn').onclick = () => { if (state.step === STEPS.length - 1) return copyOrder(); goStep(state.step + 1); };
+$('nextBtn').onclick = () => { if (state.step === steps().length - 1) return copyOrder(); goStep(state.step + 1); };
 
 function renderStep(anim) {
-  const s = STEPS[state.step];
-  $('stepNo').textContent = `${state.step + 1} / ${STEPS.length}`; $('stepTitle').textContent = s.title; $('stepHint').textContent = s.hint;
+  const s = steps()[state.step];
+  $('stepNo').textContent = `${state.step + 1} / ${steps().length}`; $('stepTitle').textContent = s.title; $('stepHint').textContent = s.hint;
   [...$('stepper').children].forEach((b, i) => { b.className = i === state.step ? 'cur' : i <= state.visited ? 'done' : ''; });
   const body = $('body'), openGal = new Set([...body.querySelectorAll('.gallery:not([hidden])')].map(g => g.dataset.gallery));
-  body.innerHTML = ({ dur: stepDur, pg: stepPg, done: stepDone })[s.id]?.() ?? stepCats(s);
+  body.innerHTML = ({ dur: stepDur, pg: stepPg, done: stepDone, evdays: stepEvDays, evcrew: () => stepEvItems('crew'), evgear: () => stepEvItems('gear'), evdone: stepEvDone })[s.id]?.() ?? stepCats(s);
   openGal.forEach(id => { const g = body.querySelector(`[data-gallery="${id}"]`); if (g) { g.hidden = false; const b = body.querySelector(`[data-works="${id}"]`); b.textContent = '收起'; fillGallery(g, PG_BY[id]); } });
   if (s.id === 'done') afterDone();
+  if (s.id === 'evdone') { const cv = $('sampleBig'); if (cv) drawEvent(cv); }
   if (anim && !reduce) { body.classList.remove('enter'); void body.offsetWidth; body.classList.add('enter'); }
   renderDock();
 }
 function renderDock() {
-  const s = STEPS[state.step], n = $('nextBtn'), last = state.step === STEPS.length - 1;
+  const s = steps()[state.step], n = $('nextBtn'), last = state.step === steps().length - 1;
   $('backBtn').disabled = state.step === 0;
   n.disabled = !canLeave(state.step); n.classList.remove('ghost');
   if (n.disabled) n.textContent = s.need;
-  else if (last) n.textContent = '复制订单';
+  else if (last) n.textContent = state.mode === 'event' ? '复制报价单' : '复制订单';
+  else if (s.grp && !EV_ITEMS.some(i => i.grp === s.grp && evQ(i.id))) { n.textContent = '先不加，下一步'; n.classList.add('ghost'); }
   else if (s.cats && !s.cats.some(([c]) => ITEMS.some(i => i.cat === c && !i.locked && (c === 'body' ? state.body === i.id && i.r !== 'base' : has(i.id)))) && !(s.id === 'svc' && state.svc !== 'std')) { n.textContent = '先不加，下一步'; n.classList.add('ghost'); }
-  else n.textContent = state.step === STEPS.length - 2 ? '看订单' : '下一步';
+  else n.textContent = state.step === steps().length - 2 ? (state.mode === 'event' ? '看报价单' : '看订单') : '下一步';
 }
 
 function stepDur() {
-  return `<div class="grp">${DURATIONS.map(d => `<button type="button" class="opt" data-dur="${d.id}" aria-pressed="${state.dur === d.id}">
+  return modeSeg() + `<div class="grp">${DURATIONS.map(d => `<button type="button" class="opt" data-dur="${d.id}" aria-pressed="${state.dur === d.id}">
     ${d.flag ? `<span class="flag ${d.flagG ? 'g' : ''}">${d.flag}</span>` : ''}
     <span class="t">${d.name}</span><span class="p">${yuan(d.price)}</span>
     <span class="d">约 <em>${yuan(d.price / d.hours)}/小时</em> · 含精修 <em>${d.retouch} 张</em> · ${d.scenes}<br>${d.tip}</span></button>`).join('')}</div>
@@ -1025,6 +1196,13 @@ function afterDone() { const cv = $('sampleBig'); if (cv) drawSample(cv, statsOf
 
 $('body').addEventListener('click', e => {
   const t = e.target;
+  const md = t.closest('[data-mode]'); if (md) return setMode(md.dataset.mode);
+  const ed = t.closest('[data-evdays]'); if (ed) return setEvDays(+ed.dataset.evdays);
+  if (t.closest('[data-reh]')) return setEvReh(!state.ev.reh);
+  if (t.closest('[data-tax]')) { state.ev.tax = !state.ev.tax; Snd.tick(); return update(); }
+  if (t.closest('[data-evpreset]')) return applyEvPreset();
+  const qb = t.closest('[data-qty]'); if (qb) return setQty(qb.dataset.qty, evQ(qb.dataset.qty) + +qb.dataset.d);
+  const ec = t.closest('[data-ev]'); if (ec) { if (!evQ(ec.dataset.ev)) setQty(ec.dataset.ev, 1); return; }
   const d = t.closest('[data-dur]'); if (d) return setDur(d.dataset.dur);
   const pr = t.closest('[data-preset]'); if (pr) return applyPreset(PRESETS.find(p => p.id === pr.dataset.preset));
   const ph = t.closest('[data-photo]'); if (ph) return showPhoto(PG_BY[ph.dataset.photo]);
@@ -1081,7 +1259,7 @@ function applyPreset(p, opts = {}) {
   [...state.items].filter(x => !want.has(x)).forEach(x => toggle(x, false, true));
   const gap = reduce || opts.quiet ? 0 : 120;
   p.items.filter(x => !has(x)).forEach((x, i) => queue.push(setTimeout(() => toggle(x, true, opts.quiet), 250 + i * gap)));
-  if (!opts.quiet) { feed(`套餐：${p.name}`, '', '#f2a900'); queue.push(setTimeout(() => { state.visited = STEPS.length - 1; goStep(STEPS.length - 1); }, 300 + p.items.length * gap)); }
+  if (!opts.quiet) { feed(`套餐：${p.name}`, '', '#f2a900'); queue.push(setTimeout(() => { state.visited = steps().length - 1; goStep(steps().length - 1); }, 300 + p.items.length * gap)); }
   update();
 }
 
@@ -1113,11 +1291,13 @@ const shown = { price: 0, power: 0 }, target = { price: 0, power: 0 };
 let lastTickSnd = 0;
 function tick() {
   for (const k of ['price', 'power']) { const d = target[k] - shown[k]; shown[k] += d * .18; if (Math.abs(target[k] - shown[k]) < 1) shown[k] = target[k]; }
-  $('total').textContent = yuan(shown.price); $('power').textContent = Math.round(shown.power).toLocaleString('zh-CN');
+  $('total').textContent = shown.price === target.price ? yuanX(target.price) : yuan(shown.price); $('power').textContent = Math.round(shown.power).toLocaleString('zh-CN');
   requestAnimationFrame(tick);
 }
 let miniTimer = 0, wasFull = false, lastGrade = '—';
 function update() {
+  if (state.mode === 'event') return updateEvent();
+  $('fullmsg').querySelector('span').textContent = '满配摄影团队已就位';
   const P = priceOf(state), S = statsOf(state), pw = powerOf(state), [, g] = gradeOf(pw);
   target.price = P.total; target.power = pw;
   $('priceSub').innerHTML = P.disc ? `合计<s>${yuan(P.orig)}</s><em>已减 ${yuan(P.disc)}</em>` : state.dur ? `合计 · 定金 ${yuan(DEPOSIT)}` : '合计';
@@ -1257,6 +1437,13 @@ function openModal(title, nodes) { $('modalTitle').textContent = title; $('modal
 $('modalClose').onclick = () => $('modal').hidden = true;
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').hidden = true; });
 $('mini').onclick = () => {
+  if (state.mode === 'event') {
+    if (!state.ev.days) return toast('先选活动天数');
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 400; drawEvent(cv);
+    const tags = document.createElement('div'); tags.className = 'tags'; tags.innerHTML = evTags().map(([t, h]) => `<span class="${h ? 'hi' : ''}">${t}</span>`).join('');
+    const p = document.createElement('p'); p.textContent = '示意图。机位越多，画面越丰富：导播切换、下方多机位预览、绿幕采访画中画、照片直播实时上传。';
+    return openModal('直播画面示意', [cv, tags, p]);
+  }
   if (!state.dur) return toast('先选拍摄时长');
   const cv = document.createElement('canvas'); cv.width = 640; cv.height = 400; drawSample(cv, statsOf(state));
   const tags = document.createElement('div'); tags.className = 'tags'; tags.innerHTML = tagList(statsOf(state)).map(([t, h]) => `<span class="${h ? 'hi' : ''}">${t}</span>`).join('');
@@ -1280,12 +1467,15 @@ function orderText() {
     `免费包含：${P.free.map(f => f[0]).join('、')}\n\n你会拿到：\n${deliverables(P).map(x => '· ' + x).join('\n')}`;
 }
 function copyOrder() {
-  const txt = orderText();
+  const txt = state.mode === 'event' ? evQuoteText() : orderText();
   const fallback = () => { const ta = document.createElement('textarea'); ta.id = 'orderText'; ta.value = txt; ta.readOnly = true; const p = document.createElement('p'); p.textContent = '自动复制没成功，请长按或全选下面的文字复制。'; openModal('订单内容', [p, ta]); ta.select(); };
   if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => { Snd.chime(); toast('订单已复制，发给客服就能锁档期'); }, fallback); else fallback();
 }
 function poster() {
-  const P = priceOf(state), pw = powerOf(state), [, g, gt] = gradeOf(pw);
+  const isEv = state.mode === 'event', E = isEv ? evPrice() : null, P = isEv ? null : priceOf(state);
+  const pw = isEv ? evPower() : powerOf(state), [, g, gt] = gradeOf(pw);
+  const totalTxt = isEv ? yuanX(E.total) : yuan(P.total), subTxt = isEv ? `活动 ${state.ev.days} 天${state.ev.reh ? ' + 彩排' : ''} · 现场 ${E.crew} 人` : `${P.d.name} · LV.${P.p.lv} ${P.p.title}`;
+  const deliv = isEv ? evDeliverables() : deliverables(P);
   const C = document.createElement('canvas'); C.width = 1080; C.height = 1560; const x = C.getContext('2d');
   x.fillStyle = '#0f1011'; x.fillRect(0, 0, 1080, 1560);
   renderer.render(scene, cam); const src = renderer.domElement, ar = 1080 / 900; let cw = src.width, ch = cw / ar; if (ch > src.height) { ch = src.height; cw = ch * ar; }
@@ -1295,15 +1485,206 @@ function poster() {
   const gr = x.createLinearGradient(0, 820, 0, 1010); gr.addColorStop(0, 'rgba(15,16,17,0)'); gr.addColorStop(1, 'rgba(15,16,17,1)'); x.fillStyle = gr; x.fillRect(0, 820, 1080, 190);
   x.fillStyle = '#f2a900'; x.fillRect(56, 900, 96, 96); x.fillStyle = '#171100'; x.font = '700 64px "Barlow Condensed", sans-serif'; x.textAlign = 'center'; x.fillText(g, 104, 972); x.textAlign = 'left';
   x.fillStyle = '#e8e5dc'; x.font = '700 80px "Barlow Condensed", sans-serif'; x.fillText(String(pw), 176, 968); x.font = '28px "Noto Sans SC", sans-serif'; x.fillStyle = '#8f8c84'; x.fillText('战斗力 · ' + gt, 180, 1000);
-  x.textAlign = 'right'; x.fillStyle = '#f2a900'; x.font = '700 72px "Barlow Condensed", sans-serif'; x.fillText(yuan(P.total), 1024, 968); x.fillStyle = '#8f8c84'; x.font = '26px "Noto Sans SC", sans-serif'; x.fillText(`${P.d.name} · LV.${P.p.lv} ${P.p.title}`, 1024, 1000); x.textAlign = 'left';
-  const sc = document.createElement('canvas'); sc.width = 640; sc.height = 400; drawSample(sc, statsOf(state)); x.drawImage(sc, 56, 1040, 480, 300);
+  x.textAlign = 'right'; x.fillStyle = '#f2a900'; x.font = '700 72px "Barlow Condensed", sans-serif'; x.fillText(totalTxt, 1024, 968); x.fillStyle = '#8f8c84'; x.font = '26px "Noto Sans SC", sans-serif'; x.fillText(subTxt, 1024, 1000); x.textAlign = 'left';
+  const sc = document.createElement('canvas'); sc.width = 640; sc.height = 400; if (isEv) drawEvent(sc); else drawSample(sc, statsOf(state)); x.drawImage(sc, 56, 1040, 480, 300);
   x.fillStyle = '#e8e5dc'; x.font = '26px "Noto Sans SC", sans-serif'; let yy = 1060;
-  deliverables(P).slice(0, 8).forEach(t => { x.fillText('· ' + (t.length > 18 ? t.slice(0, 17) + '…' : t), 570, yy + 20); yy += 38; });
-  x.fillStyle = '#8db96f'; x.fillText(`免费包含价值 ${yuan(P.freeVal)} · 价格透明 · 下雨免费改期`, 56, 1400);
-  x.fillStyle = '#8f8c84'; x.font = '24px "Noto Sans SC", sans-serif'; x.fillText('所有摄影师均经过作品审核、试拍考核和服务培训', 56, 1450); x.fillText('样片为示意图', 56, 1490);
+  deliv.slice(0, 8).forEach(t => { x.fillText('· ' + (t.length > 18 ? t.slice(0, 17) + '…' : t), 570, yy + 20); yy += 38; });
+  x.fillStyle = '#8db96f'; x.fillText(isEv ? `${isEv && state.ev.tax ? '含税' : '未税'}报价 · 岗位费用包含对应设备 · 导播台和航拍已含` : `免费包含价值 ${yuan(P.freeVal)} · 价格透明 · 下雨免费改期`, 56, 1400);
+  x.fillStyle = '#8f8c84'; x.font = '24px "Noto Sans SC", sans-serif'; x.fillText(isEv ? `人民币大写：${rmbUpper(E.total)}` : '所有摄影师均经过作品审核、试拍考核和服务培训', 56, 1450); x.fillText(isEv ? '画面为示意图' : '样片为示意图', 56, 1490);
   const img = new Image(); img.src = C.toDataURL('image/png'); img.alt = '配置海报';
   const p = document.createElement('p'); p.textContent = '手机长按图片、电脑右键「图片另存为」即可保存。';
   openModal('配置海报', [img, p]);
+}
+
+/* =====================================================================
+   活动 · 会议直播模式
+   ===================================================================== */
+const evQ = id => state.ev.q[id] || 0;
+const qObj = (ev = state.ev) => Object.fromEntries(EV_ITEMS.map(i => [i.id, ev.q[i.id] || 0]));
+function evMult(bill, ev = state.ev) { const d = ev.days, r = ev.reh; return { perDay: d + (r ? .5 : 0), showDay: d, fullDay: d + (r ? 1 : 0), once: 1 }[bill]; }
+function billLabel(it, q, ev = state.ev) { return it.bill === 'once' ? `${q}${it.unit}` : `${q}${it.unit} × ${evMult(it.bill, ev)}天`; }
+function evPrice(ev = state.ev) {
+  const rows = EV_ITEMS.filter(it => (ev.q[it.id] || 0) > 0).map(it => { const q = ev.q[it.id], m = evMult(it.bill, ev); return { it, q, m, sub: it.price * q * m }; });
+  const sub = rows.reduce((a, r) => a + r.sub, 0), tax = ev.tax ? Math.round(sub * EVENT_TAX * 100) / 100 : 0;
+  const crew = (ev.days ? 1 : 0) + ['ev_director', 'ev_fixed', 'ev_roam', 'ev_photo', 'ev_editor'].reduce((a, id) => a + (ev.q[id] || 0), 0);
+  return { rows, sub, tax, total: sub + tax, crew };
+}
+function evStats() { const out = { q: 0, l: 0, m: 0, v: 0, a: 0, s: 0 }; if (!state.ev.days) return out; out.s += 10; for (const it of EV_ITEMS) { const q = evQ(it.id); for (const k in it.st) out[k] += it.st[k] * q; } return out; }
+function evPower() { return state.ev.days ? state.ev.days * 60 + (state.ev.reh ? 30 : 0) + statSum(evStats()) * 10 : 0; }
+// 人民币大写，例如 58250 → 伍万捌仟贰佰伍拾元整
+function rmbUpper(num) {
+  const D = '零壹贰叁肆伍陆柒捌玖', U = ['', '拾', '佰', '仟'], B = ['', '万', '亿'];
+  let [i, f] = Math.abs(num).toFixed(2).split('.'), out = '';
+  if (+i === 0) out = '零';
+  else {
+    const groups = []; while (i.length) { groups.unshift(i.slice(-4)); i = i.slice(0, -4); }
+    groups.forEach((g, gi) => {
+      let gs = '', zero = false;
+      for (let k = 0; k < g.length; k++) { const d = +g[k], pos = g.length - 1 - k; if (!d) { zero = true; continue; } if (zero && (gs || out)) gs += '零'; gs += D[d] + U[pos]; zero = false; }
+      if (+g) out += gs + B[groups.length - 1 - gi]; else if (out && !out.endsWith('零')) out += '零';
+    });
+    out = out.replace(/零+$/, '');
+  }
+  out += '元'; const j = +f[0], fen = +f[1];
+  if (!j && !fen) out += '整'; else { out += j ? D[j] + '角' : '零'; if (fen) out += D[fen] + '分'; }
+  return out;
+}
+function evUnit(it, i) {
+  const [x, z, y = 0] = it.slots[i], r = it.aim ? faceTo(x, z, ...it.aim) : faceTo(x, z);
+  let px = x, pz = z; if (it.offset) { const [ox, oz] = it.offset; px = x + ox * Math.cos(r) + oz * Math.sin(r); pz = z - ox * Math.sin(r) + oz * Math.cos(r); }
+  return { ...it, id: `${it.id}#${i}`, pos: [px, y, pz], rot: [0, r, 0], priceLabel: `+¥${it.price.toLocaleString('zh-CN')}${it.bill === 'once' ? '' : '/天'}` };
+}
+function syncEvFree(silent) {
+  const on = state.mode === 'event' && state.ev.days > 0;
+  const want = { lead_walkie: on, lead_headset: on, lead_mic: on, evf_fs5: on && evQ('ev_fixed') > 0, evf_drone: on && evQ('ev_fixed') + evQ('ev_roam') > 0 };
+  let k = 0;
+  for (const [id, w] of Object.entries(want)) { if (w && !live.has(id)) { const quiet = silent || k > 0; setTimeout(() => equip(FREE_3D[id], { quiet }), k++ * 220); } else if (!w && live.has(id)) unequip(id); }
+}
+function setMode(m, silent) {
+  if (state.mode === m) return;
+  queue.forEach(clearTimeout); queue = [];
+  for (const id of [...live.keys()]) unequip(id, true);
+  Object.assign(state, { mode: m, step: 0, visited: 0, dur: null, pg: null, svc: 'std', body: 'body_a74', ev: { days: 0, reh: true, tax: false, q: {} } }); state.items.clear();
+  setLook(m === 'event' ? EV_LOOK : BLANK_LOOK); moveCam(m); buildStepper();
+  if (!silent) { Snd.step(); puff(V(0, .05, 0), true); toast(m === 'event' ? '活动 · 会议直播：按人天计费，先选活动天数' : '旅拍写真：按小时计费，先选拍多久'); }
+  $('miniEmpty').hidden = false; $('miniEmpty').innerHTML = m === 'event' ? '选好天数后<br>这里出直播画面' : '选好时长后<br>这里出样片';
+  update(); renderStep(true);
+}
+function setEvDays(d) {
+  const first = !state.ev.days; if (state.ev.days === d) return; state.ev.days = d;
+  if (first) { syncEvFree(); setTimeout(() => toast('现场制作总监已就位：对讲机、导播耳机、无线麦'), 400); }
+  else { Snd.tick(); feed(`活动 ${d} 天`, '', '#e8e5dc'); }
+  update();
+}
+function setEvReh(v) { state.ev.reh = v; Snd.tick(); feed(v ? '加半天彩排' : '不彩排', '', '#e8e5dc'); update(); }
+function setQty(id, n, silent) {
+  const it = EV_BY[id]; n = Math.max(0, Math.min(it.max, n)); const old = evQ(id); if (n === old) return;
+  if (!state.ev.days) { toast('先选活动天数'); return; }
+  state.ev.q[id] = n;
+  if (it.build) { for (let i = old; i < n; i++) { const u = evUnit(it, i); setTimeout(() => evQ(id) > i && equip(u, { quiet: silent }), (i - old) * 160); } for (let i = n; i < old; i++) unequip(`${id}#${i}`); }
+  else if (n > old && !silent) { Snd.chime(); floatText(V(0, 1.3, 0), `+¥${it.price.toLocaleString('zh-CN')}`, it.name, RCOL[it.r]); buzz(12); }
+  else if (n < old) Snd.remove();
+  if (n < old) feed(`减少 ${it.name}`, `×${n}`, '#8f8c84'); else if (!it.build && !silent) feed(it.name, `×${n}`, RCOL[it.r]);
+  syncEvFree(silent); update();
+}
+function applyEvPreset() {
+  queue.forEach(clearTimeout); queue = [];
+  if (!state.ev.days) setEvDays(EV_REF.days); else state.ev.days = EV_REF.days;
+  state.ev.reh = EV_REF.reh; let i = 0;
+  for (const it of EV_ITEMS) { const n = EV_REF.q[it.id]; if (n === evQ(it.id)) continue; queue.push(setTimeout(() => setQty(it.id, n), 300 + i++ * (reduce ? 0 : 200))); }
+  queue.push(setTimeout(() => { state.visited = STEPS_EVENT.length - 1; goStep(STEPS_EVENT.length - 1); }, 600 + i * (reduce ? 0 : 200)));
+  feed('参考案例：十月大会', '', '#f2a900'); update();
+}
+function evSchedule() {
+  const ev = state.ev, cam = 1 + evQ('ev_director') + evQ('ev_fixed') + evQ('ev_roam'), out = [];
+  if (ev.reh) out.push(['彩排日', '进场、搭建、联调、彩排', cam]);
+  for (let d = 1; d <= ev.days; d++) out.push([`第 ${d} 天`, d === ev.days && evQ('ev_green') ? '活动直播 + 绿幕采访' : d < ev.days && evQ('ev_overnight') >= ev.days - d ? '活动直播，晚上快剪花絮' : '活动拍摄与直播', cam + evQ('ev_photo') + evQ('ev_editor')]);
+  return out;
+}
+function evDeliverables() {
+  const q = evQ, cams = q('ev_fixed') + q('ev_roam'), d = [];
+  if (cams) d.push(`${cams} 机位直播${q('ev_director') ? '，导播实时切换输出大屏' : ''}${q('ev_fixed') ? '，FS5 全景供后台监看' : ''}`);
+  if (q('ev_roam')) d.push(`游动机位穿插拍活动花絮${q('ev_tx') ? '，图传无线回传' : ''}`);
+  if (q('ev_photo')) d.push(`照片直播：每天 ${q('ev_photo')} 个机位，边拍边上传`);
+  if (q('ev_album')) d.push('直播相册：嘉宾扫码看图、下载');
+  if (q('ev_editor')) d.push('驻场剪辑：素材整理、现场花絮、播放文件检查');
+  if (q('ev_overnight')) d.push(`夜间快剪 ${q('ev_overnight')} 次：当晚出花絮片，第二天会上播放`);
+  if (q('ev_green')) d.push(`绿幕采访${q('ev_light') ? `，${q('ev_light')} 盏灯布光` : ''}，无线麦收音`);
+  if (q('ev_ptz')) d.push('舞台画面输出到返看电视');
+  if (q('ev_vmix')) d.push('直播画面实时美颜');
+  if (cams) d.push('大疆御系列航拍按需配合');
+  d.push('现场制作总监全程对接');
+  return d;
+}
+function evTags() { const q = evQ, cams = q('ev_fixed') + q('ev_roam'), t = []; t.push(cams ? [`${cams} 机位直播`, cams >= 4 ? 1 : 0] : ['还没有直播机位', 0]); if (q('ev_director')) t.push(['导播切换', 1]); if (q('ev_vmix')) t.push(['实时美颜', 0]); if (q('ev_photo')) t.push(['照片直播', 1]); if (q('ev_green')) t.push(['绿幕采访', 0]); if (q('ev_overnight')) t.push(['当晚出花絮', 1]); if (q('ev_ptz')) t.push(['舞台返看', 0]); return t; }
+const modeSeg = () => `<div class="seg" role="group" aria-label="拍摄类型"><button type="button" data-mode="travel" aria-pressed="${state.mode === 'travel'}">旅拍写真<small>按小时 · 个人 / 情侣 / 婚纱</small></button><button type="button" data-mode="event" aria-pressed="${state.mode === 'event'}">活动 · 会议直播<small>按人天 · 多机位 / 导播</small></button></div>`;
+function stepEvDays() {
+  const ev = state.ev;
+  return modeSeg() + `<div class="grp"><div class="grp-h">正式活动天数<em>不含彩排</em></div><div class="chips">${EVENT_DAYS.map(d => `<button type="button" class="chip-btn" data-evdays="${d}" aria-pressed="${ev.days === d}">${d}<small>天</small></button>`).join('')}</div></div>
+    <button type="button" class="tog" data-reh aria-pressed="${ev.reh}"><span><b>提前半天进场彩排</b><small>导演、直播机位、美颜 +0.5 天；返看机位按整天；照片直播和剪辑不到场</small></span><i></i></button>
+    <div class="note"><b>报价规则：</b>岗位费用已包含对应设备。导播台、FS5 全景机、无线麦、御系列航拍、剪辑工作站和现场制作总监都已包含，不另收费。未税报价，开票另加 1%。</div>
+    <div class="h"><h3>参考案例</h3><small>点了直接看报价单</small></div>
+    <div class="presets" style="grid-template-columns:1fr"><button type="button" data-evpreset><b>十月大会 · 3 天 + 半天彩排<small>3 固定 + 3 游动 + 2 照片直播 + 导播 + 剪辑，现场 11 人</small></b><span>${yuan(evPrice(EV_REF).sub)}</span></button></div>`;
+}
+function evCard(it) {
+  const q = evQ(it.id), unitTxt = it.bill === 'once' ? `/${it.unit}` : `/${it.unit}/天`;
+  const calc = q && state.ev.days ? `${billLabel(it, q)} = ${yuan(it.price * q * evMult(it.bill))}` : `参考 ${it.ref} ${it.unit}`;
+  return `<div class="card has-qty" data-ev="${it.id}" data-r="${it.r}" data-on="${q > 0}">
+    <span class="thumb" data-n="×${q}">${thumbs[it.id] ? `<img src="${thumbs[it.id]}" alt="">` : ''}</span>
+    <span style="min-width:0"><span class="c-name"><span class="c-tag">${RAR[it.r]}</span>${it.name}</span><br><span class="en">${it.en}</span><br><span class="c-model">${it.desc}</span></span>
+    <div class="c-foot"><span class="c-price">¥${it.price.toLocaleString('zh-CN')}<small>${unitTxt} · ${calc}</small></span>
+      <span class="qty"><button type="button" data-qty="${it.id}" data-d="-1" ${q ? '' : 'disabled'} aria-label="减少${it.name}">−</button><b>${q}</b><button type="button" data-qty="${it.id}" data-d="1" ${q >= it.max ? 'disabled' : ''} aria-label="增加${it.name}">+</button></span></div></div>`;
+}
+function stepEvItems(grp) {
+  const list = `<div class="grp">${EV_ITEMS.filter(i => i.grp === grp).map(evCard).join('')}</div>`;
+  if (grp === 'crew') return `<div class="note"><b>岗位费用包含对应设备。</b>现场制作总监已包含，负责总对接和人员设备统筹。</div>` + list;
+  return list + `<div class="grp"><div class="grp-h">已包含，不另收费</div><div class="incl">${EV_FREE.map(f => `<span>${f.name}</span>`).join('')}</div></div>`;
+}
+function stepEvDone() {
+  const E = evPrice(), S = evStats(), pw = evPower(), [, g, gt] = gradeOf(pw), ev = state.ev, q = qObj();
+  const rows = E.rows.map((r, i) => `<div class="qt-row"><span class="no">${String(i + 1).padStart(2, '0')}</span><span>${r.it.name}<small>${r.it.en} · ${billLabel(r.it, r.q)} × ${yuan(r.it.price)}</small></span><span class="amt">${yuan(r.sub)}</span></div>`).join('');
+  const free = EV_FREE.filter(f => f.when(q)).map(f => `<div class="qt-row"><span class="no">含</span><span>${f.name}<small>${f.note}</small></span><span class="amt" style="color:var(--good)">已含</span></div>`).join('');
+  return `<div class="pw"><div class="grade">${g}</div><div><small>综合战斗力</small><strong class="num">${pw.toLocaleString('zh-CN')}</strong><small>${gt} · 活动 ${ev.days} 天${ev.reh ? ' + 彩排' : ''} · 现场 ${E.crew} 人</small></div></div>
+    <div class="stats">${STAT_KEYS.map(([k, n]) => `<div class="st"><span>${n}</span><i style="--w:${Math.min(100, S[k])}%"></i><span>${Math.min(100, S[k])}</span></div>`).join('')}</div>
+    <div class="grp"><div class="h"><h3>直播画面示意</h3><small>示意效果</small></div><div class="sample-frame"><canvas id="sampleBig" width="640" height="400"></canvas><span>示意图</span></div><div class="tags">${evTags().map(([t, h]) => `<span class="${h ? 'hi' : ''}">${t}</span>`).join('')}</div></div>
+    <div class="grp"><div class="h"><h3>你会拿到</h3></div><ul class="deliv">${evDeliverables().map(x => `<li>${x}</li>`).join('')}</ul></div>
+    <div class="grp"><div class="h"><h3>报价单</h3><small>${ev.tax ? '含税' : '未税'} · 岗位费用包含对应设备</small></div>
+      <div class="qt">${rows || '<div class="qt-row"><span></span><span>还没有添加岗位或设备</span><span></span></div>'}${free}
+        <div class="qt-sum"><div class="row total"><span>项目总报价（未税）</span><span>${yuan(E.sub)}</span></div><div class="upper">人民币大写：${rmbUpper(E.sub)}</div>
+        ${ev.tax ? `<div class="row"><span>开票税费（${EVENT_TAX * 100}%）</span><span>${yuanX(E.tax)}</span></div><div class="row total"><span>含税总额</span><span>${yuanX(E.total)}</span></div><div class="upper">人民币大写：${rmbUpper(E.total)}</div>` : ''}</div></div>
+      <button type="button" class="tog" data-tax aria-pressed="${ev.tax}"><span><b>需要开票</b><small>加 ${EVENT_TAX * 100}% 税点</small></span><i></i></button>
+      <div class="actions"><button type="button" class="primary" data-act="copy">复制报价单</button><button type="button" data-act="poster">生成配置海报</button></div></div>
+    <div class="grp"><div class="h"><h3>每日安排</h3><small>到场人数</small></div>${evSchedule().map(([d, t, n]) => `<div class="day"><b>${d}</b><span>${t}</span><em>${n} 人</em></div>`).join('')}</div>
+    <p class="ref">价格参考：光感影视十月活动设备与服务报价（2026.09.29 v1）。</p>`;
+}
+function evQuoteText() {
+  const E = evPrice(), ev = state.ev;
+  return `【${BRAND}｜活动设备与服务报价】\n活动 ${ev.days} 天${ev.reh ? ' + 提前半天彩排' : ''}　${ev.tax ? '含税' : '未税'}报价　岗位费用包含对应设备\n\n` +
+    E.rows.map((r, i) => `${String(i + 1).padStart(2, '0')} ${r.it.name}（${r.it.en}）  ${billLabel(r.it, r.q)} × ${yuan(r.it.price)} = ${yuan(r.sub)}`).join('\n') +
+    `\n\n已含：${EV_FREE.filter(f => f.when(qObj())).map(f => f.name).join('、')}\n\n项目总报价（未税）：${yuan(E.sub)}\n人民币大写：${rmbUpper(E.sub)}` +
+    (ev.tax ? `\n开票税费（${EVENT_TAX * 100}%）：${yuanX(E.tax)}\n含税总额：${yuanX(E.total)}\n人民币大写：${rmbUpper(E.total)}` : '') +
+    `\n\n每日安排：\n${evSchedule().map(([d, t, n]) => `${d}：${t}，${n} 人`).join('\n')}\n\n交付：\n${evDeliverables().map(x => '· ' + x).join('\n')}`;
+}
+function updateEvent() {
+  const E = evPrice(), pw = evPower(), [, g] = gradeOf(pw), ev = state.ev;
+  target.price = E.total; target.power = pw;
+  $('priceSub').innerHTML = ev.days ? `${ev.tax ? '含税' : '未税'} · 现场 ${E.crew} 人` : '合计';
+  const ge = $('grade'); ge.textContent = g; ge.classList.toggle('none', g === '—');
+  if (g !== lastGrade && g !== '—' && lastGrade !== '—' && started) feed(`评级提升到 ${g}`, '', '#f2a900');
+  lastGrade = g;
+  const cap = 1 + EV_ITEMS.reduce((a, i) => a + i.max, 0), have = (ev.days ? 1 : 0) + EV_ITEMS.reduce((a, i) => a + evQ(i.id), 0), load = Math.round(have / cap * 100);
+  $('loadTxt').textContent = load + '%'; $('loadBar').style.width = load + '%';
+  $('fullmsg').querySelector('span').textContent = '满编直播团队已就位';
+  const full = load >= 100; $('fullmsg').classList.toggle('on', full);
+  if (full && !wasFull && started) { Snd.full(); buzz([30, 50, 30, 50, 60]); toast('满编：导播 + 8 机位 + 照片直播 + 剪辑全部就位'); kick.set(0, -.15, 0); fovPunch = 7; }
+  wasFull = full;
+  renderStep();
+  clearTimeout(miniTimer); miniTimer = setTimeout(() => { if (ev.days) { $('miniEmpty').hidden = true; drawEvent($('miniCv'), true); } }, 120);
+  window.claude?.hot?.snapshot?.(() => ({ mode: 'event', ev: { ...state.ev, q: { ...state.ev.q } }, step: state.step }));
+}
+// 直播画面示意：会场大屏、主讲人、观众；机位越多画面越丰富
+function drawEvent(cv, mini) {
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, k = W / 640, q = evQ, cams = q('ev_fixed') + q('ev_roam');
+  let g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0f1e'); g.addColorStop(1, '#05060b'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const sx = W * .16, sy = H * .08, sw = W * .68, sh = H * .38;
+  g = ctx.createLinearGradient(sx, sy, sx + sw, sy + sh); g.addColorStop(0, '#1d3f8f'); g.addColorStop(.6, '#6a3fb0'); g.addColorStop(1, '#d0632b'); ctx.fillStyle = g; ctx.fillRect(sx, sy, sw, sh);
+  if (!mini) { ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `900 ${30 * k}px "Noto Sans SC", sans-serif`; ctx.textAlign = 'center'; ctx.fillText('2026 年度大会', W / 2, sy + sh * .52); ctx.font = `600 ${14 * k}px "Barlow Condensed", sans-serif`; ctx.fillText('ANNUAL CONFERENCE', W / 2, sy + sh * .75); ctx.textAlign = 'left'; }
+  ctx.fillStyle = '#1a1c24'; ctx.fillRect(0, H * .6, W, H * .08);
+  const lit = Math.min(1, .3 + (q('ev_fixed') * 2 + q('ev_director') * 2 + (q('ev_light') ? 1 : 0)) / 9);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; g = ctx.createLinearGradient(0, 0, 0, H * .6); g.addColorStop(0, 'rgba(255,240,210,0)'); g.addColorStop(1, `rgba(255,240,210,${.2 * lit})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(W * .38, 0); ctx.lineTo(W * .46, 0); ctx.lineTo(W * .54, H * .62); ctx.lineTo(W * .3, H * .62); ctx.fill(); ctx.restore();
+  const cx = W * .42; ctx.fillStyle = lerpC('#20222a', '#dccbbd', lit); ctx.beginPath(); ctx.arc(cx, H * .41, H * .036, 0, 7); ctx.fill();
+  ctx.fillStyle = lerpC('#15161c', '#2c3550', lit); ctx.beginPath(); ctx.moveTo(cx - H * .065, H * .6); ctx.quadraticCurveTo(cx - H * .065, H * .46, cx, H * .455); ctx.quadraticCurveTo(cx + H * .065, H * .46, cx + H * .065, H * .6); ctx.fill();
+  ctx.fillStyle = '#3a2f2a'; ctx.fillRect(cx + H * .06, H * .49, H * .1, H * .12);
+  for (let row = 0; row < 3; row++) for (let i = 0; i < 15; i++) { const x = (i + (row % 2) * .5) / 14 * W, y = H * (.79 + row * .08); ctx.fillStyle = '#0a0a0e'; ctx.beginPath(); ctx.ellipse(x, y, W * .021, H * .04, 0, 0, 7); ctx.fill(); ctx.fillRect(x - W * .034, y + H * .025, W * .068, H * .1); }
+  if (q('ev_vmix')) { ctx.fillStyle = 'rgba(255,214,190,.07)'; ctx.fillRect(0, 0, W, H); }
+  if (!cams) { const img = ctx.getImageData(0, 0, W, H), d = img.data, Rn = rng(3); for (let i = 0; i < d.length; i += 4) { const n = (Rn() - .5) * 46; d[i] += n; d[i + 1] += n; d[i + 2] += n; } ctx.putImageData(img, 0, 0); }
+  if (q('ev_director')) { ctx.fillStyle = 'rgba(242,169,0,.95)'; ctx.fillRect(W * .05, H * .65, W * .32, H * .065); ctx.fillStyle = 'rgba(15,16,17,.9)'; ctx.fillRect(W * .05, H * .715, W * .32, H * .05); if (!mini) { ctx.fillStyle = '#171100'; ctx.font = `900 ${16 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('主讲嘉宾', W * .065, H * .695); ctx.fillStyle = '#e8e5dc'; ctx.font = `500 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('公司 · 职位', W * .065, H * .75); } }
+  if (cams >= 2) { const n = Math.min(cams, 8), bw = W * .095, bh = bw * .56, y = H - bh - 8 * k, cols = ['#2b4a7a', '#7a4a2b', '#2b7a5a', '#5a2b7a', '#7a2b3a', '#3a6a7a', '#6a6a2b', '#2b3a7a']; for (let i = 0; i < n; i++) { const x = W - (n - i) * (bw + 4 * k) - 6 * k; ctx.fillStyle = cols[i]; ctx.fillRect(x, y, bw, bh); ctx.strokeStyle = i === 0 ? '#e33' : i === 1 ? '#3d3' : 'rgba(255,255,255,.4)'; ctx.lineWidth = i < 2 ? 2 * k : 1; ctx.strokeRect(x, y, bw, bh); if (!mini) { ctx.fillStyle = '#fff'; ctx.font = `600 ${10 * k}px "Barlow Condensed", sans-serif`; ctx.fillText('CAM ' + (i + 1), x + 3 * k, y + 11 * k); } } }
+  if (q('ev_green')) { const w = W * .24, h = w * .62, x = W - w - 12 * k, y = 12 * k; g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#173a5e'); g.addColorStop(1, '#0e1c2e'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.fillStyle = q('ev_light') ? '#e8cdb8' : '#7a6a60'; ctx.beginPath(); ctx.arc(x + w * .5, y + h * .42, h * .14, 0, 7); ctx.fill(); ctx.fillStyle = '#2a2f3a'; ctx.fillRect(x + w * .32, y + h * .58, w * .36, h * .42); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); if (!mini) { ctx.fillStyle = '#fff'; ctx.font = `600 ${11 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('绿幕采访', x + 5 * k, y + 14 * k); } }
+  ctx.fillStyle = '#e0262c'; ctx.fillRect(12 * k, 12 * k, 50 * k, 20 * k); ctx.fillStyle = '#fff'; ctx.font = `700 ${14 * k}px "Barlow Condensed", sans-serif`; ctx.textBaseline = 'middle'; ctx.fillText('● LIVE', 17 * k, 22.5 * k);
+  if (!mini) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(64 * k, 12 * k, 104 * k, 20 * k); ctx.fillStyle = '#fff'; ctx.font = `500 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText(`${(1200 + cams * 830).toLocaleString('zh-CN')} 人在看`, 70 * k, 22.5 * k); }
+  if (q('ev_photo') && !mini) { ctx.fillStyle = 'rgba(15,16,17,.82)'; ctx.fillRect(12 * k, H * .5, 170 * k, 22 * k); ctx.fillStyle = '#8db96f'; ctx.font = `600 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText(`照片直播 · 已上传 ${(q('ev_photo') * 643).toLocaleString('zh-CN')} 张`, 18 * k, H * .5 + 11 * k); }
+  ctx.textBaseline = 'alphabetic';
 }
 
 /* ---------- 声音开关 ---------- */
@@ -1351,9 +1732,15 @@ async function boot(data = {}) {
   }
   $('loading').hidden = true;
   thumbs = makeThumbs(); renderStep();
+  if (data.mode === 'event' && data.ev?.days) {
+    started = true; $('splash').hidden = true; fig.visible = true; setMode('event', true);
+    Object.assign(state.ev, { days: data.ev.days, reh: data.ev.reh, tax: data.ev.tax }); syncEvFree(true);
+    for (const [id, n] of Object.entries(data.ev.q || {})) setQty(id, n, true);
+    state.step = data.step || 0; state.visited = STEPS_EVENT.length - 1; renderStep(); return;
+  }
   if (data.dur) {     // 页面热更新时恢复刚才的配置
     started = true; $('splash').hidden = true; fig.visible = true;
-    applyPreset({ ...data, items: data.items || [] }, { quiet: true }); state.step = data.step || 0; state.visited = STEPS.length - 1; renderStep();
+    applyPreset({ ...data, items: data.items || [] }, { quiet: true }); state.step = data.step || 0; state.visited = steps().length - 1; renderStep();
   }
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
