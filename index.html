@@ -1077,9 +1077,15 @@ $('posterBtn').onclick = () => {
 /* ---------- 启动 ---------- */
 $('brandName').textContent = BRAND;
 renderDur(); renderPg(); renderGear(); update(); tick(); loop();
+// 模型可以是 .glb，也可以是把 glb 转成 base64 后 export default 的 .js（某些托管平台不支持 .glb）
+async function loadModel() {
+  if (!MODEL_URL.endsWith('.js')) return loader.loadAsync(MODEL_URL);
+  const { default: b64 } = await import(new URL(MODEL_URL, document.baseURI).href);
+  return loader.parseAsync(Uint8Array.from(atob(b64), ch => ch.charCodeAt(0)).buffer, '');
+}
 async function boot(data = {}) {
   try {
-    const gltf = await loader.loadAsync(MODEL_URL);
+    const gltf = await loadModel();
     person = gltf.scene; prepPerson(person); personTemplate = SkeletonUtils.clone(person); fig.add(person);
     for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Head', 'RightHand', 'LeftHand']) { bones[n] = person.getObjectByName(n); baseQ[n] = bones[n]?.quaternion.clone(); }
     const l = bones.LeftHand.getWorldPosition(V(0, 0, 0)), r = bones.RightHand.getWorldPosition(V(0, 0, 0));
