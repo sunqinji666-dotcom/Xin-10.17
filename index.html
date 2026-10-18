@@ -6,11 +6,14 @@
 <title>摄影师装备舱</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#0b0b0c">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<!-- 字体与 three.js 全部走本地 vendor/，不依赖 Google Fonts / jsDelivr（国内微信里打开会卡住或白屏） -->
+<link rel="preload" href="vendor/three/build/three.module.js" as="script" crossorigin>
+<link rel="preload" href="assets/photographer.glb" as="fetch" crossorigin>
 <style>
 /* Layout: phone first. Top bar, live 3D photographer (always visible), guided step sheet that scrolls, fixed dock with price and next. On wide screens the stage moves left and the sheet becomes a 440px column. */
+@font-face { font-family: "Barlow Condensed"; font-weight: 500; font-display: swap; src: url(vendor/fonts/barlow-condensed-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-display: swap; src: url(vendor/fonts/barlow-condensed-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-display: swap; src: url(vendor/fonts/barlow-condensed-latin-700-normal.woff2) format("woff2"); }
 :root {
   --bg: #0f1011;
   --panel: #151617;
@@ -29,7 +32,7 @@
   --r-pro: #a57ad8;
   --r-top: #f2a900;
   --f-num: "Barlow Condensed", "DIN Condensed", "Arial Narrow", sans-serif;
-  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-body: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -377,8 +380,8 @@ button:disabled { cursor: default; }
 
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  "three": "./vendor/three/build/three.module.js",
+  "three/addons/": "./vendor/three/examples/jsm/"
 } }
 </script>
 <script type="module">
@@ -1317,7 +1320,7 @@ window.gearRenders = size => makeThumbs(size);   // 导出器材渲染图用
 function glyphIcon(ch, size = 128) {
   const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
   x.strokeStyle = 'rgba(232,229,220,.5)'; x.lineWidth = 4; x.strokeRect(22, 22, 84, 84);
-  x.fillStyle = '#e8e5dc'; x.font = '900 52px "Noto Sans SC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, 64, 68);
+  x.fillStyle = '#e8e5dc'; x.font = '900 52px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, 64, 68);
   return c.toDataURL();
 }
 
@@ -1641,7 +1644,7 @@ function drawSample(cv, S, mini) {
     const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#2f4a3a'); g.addColorStop(1, '#5a6b52'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = 'rgba(160,190,190,.9)'; ctx.lineWidth = 9 * k; ctx.beginPath(); ctx.moveTo(x - 10, y + h * .75); ctx.bezierCurveTo(x + w * .35, y + h * .1, x + w * .6, y + h * 1.05, x + w + 10, y + h * .25); ctx.stroke();
     ctx.restore(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
-    if (!mini) { ctx.fillStyle = '#fff'; ctx.font = '600 12px "Noto Sans SC", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText('航拍 · 漓江', x + 6, y + 5); }
+    if (!mini) { ctx.fillStyle = '#fff'; ctx.font = '600 12px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText('航拍 · 漓江', x + 6, y + 5); }
   }
   if (!mini) { ctx.textBaseline = 'alphabetic'; ctx.font = '600 14px "Barlow Condensed", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(`${BY[state.body].name.toUpperCase()}  ·  ${lensLabel()}  ·  1/250s  ·  ISO ${S.l >= 30 ? 100 : 400}`, 14, H - bar - 12); }
 }
@@ -1709,16 +1712,16 @@ function poster() {
   if (composer) composer.render(); else renderer.render(scene, cam); const src = renderer.domElement, ar = 1080 / 900; let cw = src.width, ch = cw / ar; if (ch > src.height) { ch = src.height; cw = ch * ar; }
   x.drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 110, 1080, 900);
   x.fillStyle = '#f2a900'; x.font = '700 34px "Barlow Condensed", sans-serif'; x.fillText(BRAND, 56, 70);
-  x.fillStyle = '#e8e5dc'; x.font = '900 34px "Noto Sans SC", sans-serif'; x.textAlign = 'right'; x.fillText(`${CITY} · 摄影师装备舱`, 1024, 70); x.textAlign = 'left';
+  x.fillStyle = '#e8e5dc'; x.font = '900 34px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; x.textAlign = 'right'; x.fillText(`${CITY} · 摄影师装备舱`, 1024, 70); x.textAlign = 'left';
   const gr = x.createLinearGradient(0, 820, 0, 1010); gr.addColorStop(0, 'rgba(15,16,17,0)'); gr.addColorStop(1, 'rgba(15,16,17,1)'); x.fillStyle = gr; x.fillRect(0, 820, 1080, 190);
   x.fillStyle = '#f2a900'; x.fillRect(56, 900, 96, 96); x.fillStyle = '#171100'; x.font = '700 64px "Barlow Condensed", sans-serif'; x.textAlign = 'center'; x.fillText(g, 104, 972); x.textAlign = 'left';
-  x.fillStyle = '#e8e5dc'; x.font = '700 80px "Barlow Condensed", sans-serif'; x.fillText(String(pw), 176, 968); x.font = '28px "Noto Sans SC", sans-serif'; x.fillStyle = '#8f8c84'; x.fillText('战斗力 · ' + gt, 180, 1000);
-  x.textAlign = 'right'; x.fillStyle = '#f2a900'; x.font = '700 72px "Barlow Condensed", sans-serif'; x.fillText(totalTxt, 1024, 968); x.fillStyle = '#8f8c84'; x.font = '26px "Noto Sans SC", sans-serif'; x.fillText(subTxt, 1024, 1000); x.textAlign = 'left';
+  x.fillStyle = '#e8e5dc'; x.font = '700 80px "Barlow Condensed", sans-serif'; x.fillText(String(pw), 176, 968); x.font = '28px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; x.fillStyle = '#8f8c84'; x.fillText('战斗力 · ' + gt, 180, 1000);
+  x.textAlign = 'right'; x.fillStyle = '#f2a900'; x.font = '700 72px "Barlow Condensed", sans-serif'; x.fillText(totalTxt, 1024, 968); x.fillStyle = '#8f8c84'; x.font = '26px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; x.fillText(subTxt, 1024, 1000); x.textAlign = 'left';
   const sc = document.createElement('canvas'); sc.width = 640; sc.height = 400; if (isEv) drawEvent(sc); else drawSample(sc, statsOf(state)); x.drawImage(sc, 56, 1040, 480, 300);
-  x.fillStyle = '#e8e5dc'; x.font = '26px "Noto Sans SC", sans-serif'; let yy = 1060;
+  x.fillStyle = '#e8e5dc'; x.font = '26px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; let yy = 1060;
   deliv.slice(0, 8).forEach(t => { x.fillText('· ' + (t.length > 18 ? t.slice(0, 17) + '…' : t), 570, yy + 20); yy += 38; });
   x.fillStyle = '#8db96f'; x.fillText(isEv ? `${isEv && state.ev.tax ? '含税' : '未税'}报价 · 岗位费用包含对应设备 · 导播台和航拍已含` : `免费包含价值 ${yuan(P.freeVal)} · 价格透明 · 下雨免费改期`, 56, 1400);
-  x.fillStyle = '#8f8c84'; x.font = '24px "Noto Sans SC", sans-serif'; x.fillText(isEv ? `人民币大写：${rmbUpper(E.total)}` : '所有摄影师均经过作品审核、试拍考核和服务培训', 56, 1450); x.fillText(isEv ? '画面为示意图' : '样片为示意图', 56, 1490);
+  x.fillStyle = '#8f8c84'; x.font = '24px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif'; x.fillText(isEv ? `人民币大写：${rmbUpper(E.total)}` : '所有摄影师均经过作品审核、试拍考核和服务培训', 56, 1450); x.fillText(isEv ? '画面为示意图' : '样片为示意图', 56, 1490);
   const img = new Image(); img.src = C.toDataURL('image/png'); img.alt = '配置海报';
   const p = document.createElement('p'); p.textContent = '手机长按图片、电脑右键「图片另存为」即可保存。';
   openModal('配置海报', [img, p]);
@@ -1896,7 +1899,7 @@ function drawEvent(cv, mini) {
   let g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0f1e'); g.addColorStop(1, '#05060b'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   const sx = W * .16, sy = H * .08, sw = W * .68, sh = H * .38;
   g = ctx.createLinearGradient(sx, sy, sx + sw, sy + sh); g.addColorStop(0, '#1d3f8f'); g.addColorStop(.6, '#6a3fb0'); g.addColorStop(1, '#d0632b'); ctx.fillStyle = g; ctx.fillRect(sx, sy, sw, sh);
-  if (!mini) { ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `900 ${30 * k}px "Noto Sans SC", sans-serif`; ctx.textAlign = 'center'; ctx.fillText('2026 年度大会', W / 2, sy + sh * .52); ctx.font = `600 ${14 * k}px "Barlow Condensed", sans-serif`; ctx.fillText('ANNUAL CONFERENCE', W / 2, sy + sh * .75); ctx.textAlign = 'left'; }
+  if (!mini) { ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `900 ${30 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.textAlign = 'center'; ctx.fillText('2026 年度大会', W / 2, sy + sh * .52); ctx.font = `600 ${14 * k}px "Barlow Condensed", sans-serif`; ctx.fillText('ANNUAL CONFERENCE', W / 2, sy + sh * .75); ctx.textAlign = 'left'; }
   ctx.fillStyle = '#1a1c24'; ctx.fillRect(0, H * .6, W, H * .08);
   const lit = Math.min(1, .3 + (q('ev_fixed') * 2 + q('ev_director') * 2 + (q('ev_light') ? 1 : 0)) / 9);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; g = ctx.createLinearGradient(0, 0, 0, H * .6); g.addColorStop(0, 'rgba(255,240,210,0)'); g.addColorStop(1, `rgba(255,240,210,${.2 * lit})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(W * .38, 0); ctx.lineTo(W * .46, 0); ctx.lineTo(W * .54, H * .62); ctx.lineTo(W * .3, H * .62); ctx.fill(); ctx.restore();
@@ -1906,12 +1909,12 @@ function drawEvent(cv, mini) {
   for (let row = 0; row < 3; row++) for (let i = 0; i < 15; i++) { const x = (i + (row % 2) * .5) / 14 * W, y = H * (.79 + row * .08); ctx.fillStyle = '#0a0a0e'; ctx.beginPath(); ctx.ellipse(x, y, W * .021, H * .04, 0, 0, 7); ctx.fill(); ctx.fillRect(x - W * .034, y + H * .025, W * .068, H * .1); }
   if (q('ev_vmix')) { ctx.fillStyle = 'rgba(255,214,190,.07)'; ctx.fillRect(0, 0, W, H); }
   if (!cams) { const img = ctx.getImageData(0, 0, W, H), d = img.data, Rn = rng(3); for (let i = 0; i < d.length; i += 4) { const n = (Rn() - .5) * 46; d[i] += n; d[i + 1] += n; d[i + 2] += n; } ctx.putImageData(img, 0, 0); }
-  if (q('ev_director')) { ctx.fillStyle = 'rgba(242,169,0,.95)'; ctx.fillRect(W * .05, H * .65, W * .32, H * .065); ctx.fillStyle = 'rgba(15,16,17,.9)'; ctx.fillRect(W * .05, H * .715, W * .32, H * .05); if (!mini) { ctx.fillStyle = '#171100'; ctx.font = `900 ${16 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('主讲嘉宾', W * .065, H * .695); ctx.fillStyle = '#e8e5dc'; ctx.font = `500 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('公司 · 职位', W * .065, H * .75); } }
+  if (q('ev_director')) { ctx.fillStyle = 'rgba(242,169,0,.95)'; ctx.fillRect(W * .05, H * .65, W * .32, H * .065); ctx.fillStyle = 'rgba(15,16,17,.9)'; ctx.fillRect(W * .05, H * .715, W * .32, H * .05); if (!mini) { ctx.fillStyle = '#171100'; ctx.font = `900 ${16 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.fillText('主讲嘉宾', W * .065, H * .695); ctx.fillStyle = '#e8e5dc'; ctx.font = `500 ${12 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.fillText('公司 · 职位', W * .065, H * .75); } }
   if (cams >= 2) { const n = Math.min(cams, 8), bw = W * .095, bh = bw * .56, y = H - bh - 8 * k, cols = ['#2b4a7a', '#7a4a2b', '#2b7a5a', '#5a2b7a', '#7a2b3a', '#3a6a7a', '#6a6a2b', '#2b3a7a']; for (let i = 0; i < n; i++) { const x = W - (n - i) * (bw + 4 * k) - 6 * k; ctx.fillStyle = cols[i]; ctx.fillRect(x, y, bw, bh); ctx.strokeStyle = i === 0 ? '#e33' : i === 1 ? '#3d3' : 'rgba(255,255,255,.4)'; ctx.lineWidth = i < 2 ? 2 * k : 1; ctx.strokeRect(x, y, bw, bh); if (!mini) { ctx.fillStyle = '#fff'; ctx.font = `600 ${10 * k}px "Barlow Condensed", sans-serif`; ctx.fillText('CAM ' + (i + 1), x + 3 * k, y + 11 * k); } } }
-  if (q('ev_green')) { const w = W * .24, h = w * .62, x = W - w - 12 * k, y = 12 * k; g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#173a5e'); g.addColorStop(1, '#0e1c2e'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.fillStyle = q('ev_light') ? '#e8cdb8' : '#7a6a60'; ctx.beginPath(); ctx.arc(x + w * .5, y + h * .42, h * .14, 0, 7); ctx.fill(); ctx.fillStyle = '#2a2f3a'; ctx.fillRect(x + w * .32, y + h * .58, w * .36, h * .42); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); if (!mini) { ctx.fillStyle = '#fff'; ctx.font = `600 ${11 * k}px "Noto Sans SC", sans-serif`; ctx.fillText('绿幕采访', x + 5 * k, y + 14 * k); } }
+  if (q('ev_green')) { const w = W * .24, h = w * .62, x = W - w - 12 * k, y = 12 * k; g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#173a5e'); g.addColorStop(1, '#0e1c2e'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.fillStyle = q('ev_light') ? '#e8cdb8' : '#7a6a60'; ctx.beginPath(); ctx.arc(x + w * .5, y + h * .42, h * .14, 0, 7); ctx.fill(); ctx.fillStyle = '#2a2f3a'; ctx.fillRect(x + w * .32, y + h * .58, w * .36, h * .42); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); if (!mini) { ctx.fillStyle = '#fff'; ctx.font = `600 ${11 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.fillText('绿幕采访', x + 5 * k, y + 14 * k); } }
   ctx.fillStyle = '#e0262c'; ctx.fillRect(12 * k, 12 * k, 50 * k, 20 * k); ctx.fillStyle = '#fff'; ctx.font = `700 ${14 * k}px "Barlow Condensed", sans-serif`; ctx.textBaseline = 'middle'; ctx.fillText('● LIVE', 17 * k, 22.5 * k);
-  if (!mini) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(64 * k, 12 * k, 104 * k, 20 * k); ctx.fillStyle = '#fff'; ctx.font = `500 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText(`${(1200 + cams * 830).toLocaleString('zh-CN')} 人在看`, 70 * k, 22.5 * k); }
-  if (q('ev_photo') && !mini) { ctx.fillStyle = 'rgba(15,16,17,.82)'; ctx.fillRect(12 * k, H * .5, 170 * k, 22 * k); ctx.fillStyle = '#8db96f'; ctx.font = `600 ${12 * k}px "Noto Sans SC", sans-serif`; ctx.fillText(`照片直播 · 已上传 ${(q('ev_photo') * 643).toLocaleString('zh-CN')} 张`, 18 * k, H * .5 + 11 * k); }
+  if (!mini) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(64 * k, 12 * k, 104 * k, 20 * k); ctx.fillStyle = '#fff'; ctx.font = `500 ${12 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.fillText(`${(1200 + cams * 830).toLocaleString('zh-CN')} 人在看`, 70 * k, 22.5 * k); }
+  if (q('ev_photo') && !mini) { ctx.fillStyle = 'rgba(15,16,17,.82)'; ctx.fillRect(12 * k, H * .5, 170 * k, 22 * k); ctx.fillStyle = '#8db96f'; ctx.font = `600 ${12 * k}px "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.fillText(`照片直播 · 已上传 ${(q('ev_photo') * 643).toLocaleString('zh-CN')} 张`, 18 * k, H * .5 + 11 * k); }
   ctx.textBaseline = 'alphabetic';
 }
 
