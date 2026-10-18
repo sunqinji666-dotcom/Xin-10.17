@@ -89,7 +89,11 @@ button:disabled { cursor: default; }
 .fullmsg.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .fullmsg b { display: block; font-size: clamp(24px, 7vw, 40px); font-weight: 900; letter-spacing: .3em; color: var(--accent); text-shadow: 0 3px 0 #5a3f00, 0 0 24px rgba(0,0,0,.6); white-space: nowrap; }
 .fullmsg span { font-size: 11px; letter-spacing: .3em; }
-.loading { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; letter-spacing: .2em; color: var(--muted); }
+.loading { position: absolute; left: 0; right: 0; top: 42%; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .12em; color: var(--fg); text-align: center; padding-inline: 24px; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.loading .lbar { width: 160px; height: 3px; background: rgba(255,255,255,.15); }
+.loading .lbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.loading button { pointer-events: auto; border: 1px solid var(--accent); background: rgba(10,10,11,.8); color: var(--accent); padding: 6px 14px; font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.diag { position: absolute; left: 12px; right: 12px; bottom: 30px; background: rgba(110,24,24,.88); color: #fff; font-size: 11px; line-height: 1.45; padding: 5px 8px; pointer-events: auto; word-break: break-all; }
 
 /* sheet */
 .sheet { background: var(--panel); border-top: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain; min-height: 0; -webkit-overflow-scrolling: touch; }
@@ -333,7 +337,8 @@ button:disabled { cursor: default; }
       <div class="feed" id="feed"></div>
       <div class="fullmsg" id="fullmsg"><b>全副武装</b><span>满配摄影团队已就位</span></div>
       <div class="load"><small><span>装备满载度</span><b id="loadTxt">0%</b></small><div class="bar"><i id="loadBar"></i></div></div>
-      <div class="loading" id="loading">正在载入摄影师…</div>
+      <div class="loading" id="loading"><span id="loadMsg">正在载入摄影师…</span><div class="lbar"><i id="loadPct"></i></div><button type="button" id="retryBtn" hidden>重新加载人物</button></div>
+      <div class="diag" id="diag" hidden></div>
     </div>
   </main>
 
@@ -359,7 +364,7 @@ button:disabled { cursor: default; }
   <p>从一个空白摄影师开始，按步骤给他加装备、选等级、配团队。你选的每样东西都会出现在他身上，价格实时算好，最后能看到这套配置大概出什么样的片子。</p>
   <button type="button" class="go" id="startBtn">开始配置</button>
   <button type="button" class="quiet" id="quietBtn">静音进入</button>
-  <div class="tip">建议打开声音，体验更好</div>
+  <div class="tip">建议打开声音，体验更好 · <span id="splashLoad">摄影师载入中…</span></div>
 </div>
 
 <div class="modal" id="modal" hidden>
@@ -1175,9 +1180,23 @@ const CineShader = {
 const TIERS = { high: { label: '高', pr: 2, post: true, ao: true, shadow: 2048, fx: true }, mid: { label: '中', pr: 1.5, post: true, ao: false, shadow: 1024, fx: true }, low: { label: '低', pr: 1, post: false, ao: false, shadow: 1024, fx: false } };
 let tier = (() => { try { return localStorage.getItem('gear-tier'); } catch { return null; } })(), tierPinned = !!tier, composer = null, gtao = null, cinePass = null;
 if (!TIERS[tier]) tier = matchMedia('(pointer: coarse)').matches ? 'mid' : 'high';
+// 开特效前先试分配一块多重采样浮点缓冲；分配失败或缓冲不完整就不开特效
+let postOK = null;
+function postSupported() {
+  if (postOK !== null) return postOK;
+  const ext = renderer.extensions;
+  if (!renderer.capabilities.isWebGL2 || !(ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float'))) return postOK = false;
+  const gl = renderer.getContext(); let t = null;
+  try { t = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 }); renderer.setRenderTarget(t); renderer.clear(); postOK = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE; }
+  catch { postOK = false; }
+  renderer.setRenderTarget(null); t?.dispose(); return postOK;
+}
+function dropPost() { if (composer) { composer.renderTarget1?.dispose(); composer.renderTarget2?.dispose(); composer.dispose?.(); } composer = null; gtao = null; cinePass = null; renderer.setRenderTarget(null); }
 function setupPost() {
-  composer?.dispose?.(); composer = null; gtao = null; cinePass = null;
+  dropPost();
   const T = TIERS[tier]; if (!T.post) return;
+  if (!postSupported()) { tier = 'low'; return; }
+  postFrames = 0;
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
   composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, cam));
   if (T.ao) { gtao = new GTAOPass(scene, cam, 1, 1); gtao.blendIntensity = .9; gtao.updateGtaoMaterial({ radius: .3, distanceExponent: 1.4, thickness: 1, scale: 1.1, samples: 12 }); gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 }); composer.addPass(gtao); }
@@ -1190,8 +1209,9 @@ function applyTier(t, why) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, T.pr));
   key.shadow.mapSize.set(T.shadow, T.shadow); key.shadow.map?.dispose(); key.shadow.map = null;
   dust.visible = shaft.visible = T.fx; blob.material.opacity = T.ao ? .45 : 1;
-  setupPost(); resize();
-  const b = document.getElementById('qBtn'); if (b) b.textContent = '画质 ' + T.label;
+  try { setupPost(); } catch (err) { postOK = false; dropPost(); tier = 'low'; console.warn('特效初始化失败', err); }
+  softbox.visible = tier !== 'low'; resize();
+  const b = document.getElementById('qBtn'); if (b) b.textContent = '画质 ' + TIERS[tier].label;
   if (why) toast(why);
 }
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); composer?.setSize(w, h); cam.aspect = w / h; cam.userData.baseFov = w / h < .8 ? 44 : w / h < 1.2 ? 38 : 32; cam.fov = cam.userData.baseFov; cam.updateProjectionMatrix(); }
@@ -1210,7 +1230,7 @@ function moveCam(mode) {
 }
 const fpsProbe = { n: 0, sum: 0 };
 const clock = new THREE.Clock(), AX = V(1, 0, 0), AY = V(0, 1, 0), AZ = V(0, 0, 1);
-function loop() {
+function frame() {
   const dt = Math.min(clock.getDelta(), .05); clockT += dt; const t = clockT;
   if (person && bones.Spine1) {
     bones.Spine1.quaternion.copy(baseQ.Spine1).multiply(q1.setFromAxisAngle(AX, Math.sin(t * 1.7) * .012));
@@ -1241,11 +1261,36 @@ function loop() {
     fovPunch *= .82; cam.fov = cam.userData.baseFov - fovPunch; cam.updateProjectionMatrix();
   }
   if (dust.visible) { for (let i = 0; i < DUST; i++) { const [a0, r, y0, sp] = dustSeed[i], a = a0 + t * .05, y = (y0 + t * sp) % 3.2; dustPos[i * 3] = Math.cos(a) * r + Math.sin(t * .3 + i) * .05; dustPos[i * 3 + 1] = y; dustPos[i * 3 + 2] = Math.sin(a) * r; } dustGeo.attributes.position.needsUpdate = true; }
-  if (composer) { cinePass.uniforms.uTime.value = t % 100; composer.render(); } else renderer.render(scene, cam);
+  if (composer) { cinePass.uniforms.uTime.value = t % 100; composer.render(); checkPost(); } else renderer.render(scene, cam);
   // 前几秒测帧率，太卡就自动降一档画质
   if (started && !tierPinned && fpsProbe.n < 240) { fpsProbe.n++; fpsProbe.sum += dt; if (fpsProbe.n === 150) { const fps = 150 / fpsProbe.sum; if (fps < 32 && tier !== 'low') { applyTier(tier === 'high' ? 'mid' : 'low', `已自动切到${TIERS[tier === 'high' ? 'mid' : 'low'].label}画质，保证流畅`); fpsProbe.n = 0; fpsProbe.sum = 0; } } }
-  requestAnimationFrame(loop);
 }
+// 渲染循环：先排下一帧，再画这一帧。某一帧出错不会让画面卡死；特效出错就自动降到低画质
+let loopErrs = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  try { frame(); }
+  catch (err) {
+    loopErrs++; renderer.setRenderTarget(null);
+    if (composer) { postOK = false; console.warn('特效出错，切到低画质', err); applyTier('low', '特效在这台设备上不稳定，已切到低画质'); }
+    else if (loopErrs === 1) reportErr('画面渲染出错', err);
+  }
+}
+// 有些手机不支持浮点渲染缓冲，开特效会输出全黑：画几帧后取一个像素检查，黑屏就关掉特效
+let postFrames = 0;
+function checkPost() {
+  if (++postFrames !== 40) return;
+  const gl = renderer.getContext(), px = new Uint8Array(4);
+  gl.readPixels(Math.floor(gl.drawingBufferWidth * .06), Math.floor(gl.drawingBufferHeight * .55), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  if (px[0] + px[1] + px[2] < 4) applyTier('low', '这台设备不支持高级特效，已切到低画质');
+}
+function reportErr(what, err) {
+  console.error(what, err);
+  const d = document.getElementById('diag'); if (!d || !d.hidden) return;
+  d.textContent = `${what}：${(err && (err.message || err)) || ''}（请截图发给我们）`.slice(0, 220); d.hidden = false; setTimeout(() => d.hidden = true, 12000);
+}
+window.addEventListener('error', e => reportErr('页面出错', e.error || e.message));
+window.addEventListener('unhandledrejection', e => reportErr('页面出错', e.reason));
 
 /* ---------- thumbnails rendered from the real models ---------- */
 const THUMB_TOP = new Set(['ev_fixed', 'evf_fs5', 'ev_ptz', 'ev_light', 'ledstick', 'ad600', 'insta360', 'gimbal', 'ev_roam']);
@@ -1900,25 +1945,52 @@ $('quietBtn').onclick = () => start(false);
 $('brandName').textContent = BRAND; $('splashEb').textContent = `${BRAND} · ${CITY}`;
 renderStep(); update(); tick(); loop();
 // 模型可以是 .glb，也可以是把 glb 转成 base64 后 export default 的 .js（某些托管平台不支持 .glb）
-async function loadModel() {
-  if (!MODEL_URL.endsWith('.js')) return loader.loadAsync(MODEL_URL);
-  const { default: b64 } = await import(new URL(MODEL_URL, document.baseURI).href);
-  return loader.parseAsync(Uint8Array.from(atob(b64), ch => ch.charCodeAt(0)).buffer, '');
+const b64ToBytes = b64 => { const bin = atob(b64), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+async function fetchModel(onProgress) {      // 首选：直接读取同目录文件（带进度）
+  const res = await fetch(new URL(MODEL_URL, document.baseURI).href); if (!res.ok) throw new Error('HTTP ' + res.status);
+  const total = +res.headers.get('content-length') || 2.45e6, reader = res.body?.getReader?.(); let bytes;
+  if (reader) { const parts = []; let got = 0; for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(value); got += value.length; onProgress(Math.min(.99, got / total)); } bytes = new Uint8Array(got); let o = 0; for (const p of parts) { bytes.set(p, o); o += p.length; } }
+  else bytes = new Uint8Array(await res.arrayBuffer());
+  if (MODEL_URL.endsWith('.js')) { const txt = new TextDecoder().decode(bytes); bytes = b64ToBytes(txt.slice(txt.indexOf('"') + 1, txt.lastIndexOf('"'))); }
+  return loader.parseAsync(bytes.buffer, '');
 }
-async function boot(data = {}) {
+async function loadModel(onProgress) {
+  try { return await fetchModel(onProgress); }
+  catch (err) {
+    console.warn('fetch 读取模型失败，改用备用方式', err);
+    if (!MODEL_URL.endsWith('.js')) return loader.loadAsync(MODEL_URL);
+    const { default: b64 } = await import(new URL(MODEL_URL, document.baseURI).href);     // 备用：按脚本模块加载
+    return loader.parseAsync(b64ToBytes(b64).buffer, '');
+  }
+}
+let fallbackFig = null;
+function setLoad(msg, pct) { $('loadMsg').textContent = msg; if (pct != null) $('loadPct').style.width = Math.round(pct * 100) + '%'; const sl = $('splashLoad'); if (sl) sl.textContent = msg; }
+async function loadPerson() {
+  $('loading').hidden = false; $('retryBtn').hidden = true; setLoad('正在载入摄影师…', 0);
   try {
-    const gltf = await loadModel();
+    const gltf = await loadModel(p => setLoad(`正在载入摄影师 ${Math.round(p * 100)}%`, p));
     person = gltf.scene; prepPerson(person); personTemplate = SkeletonUtils.clone(person);
-    applyLook(person, BLANK_LOOK); fig.add(person);
-    for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Head', 'RightHand', 'LeftHand']) { bones[n] = person.getObjectByName(n); baseQ[n] = bones[n]?.quaternion.clone(); }
+    applyLook(person, state.mode === 'event' ? EV_LOOK : state.pg ? PG_BY[state.pg].look : BLANK_LOOK); fig.add(person);
+    if (fallbackFig) {     // 重试成功：拿掉简易人形，身上的装备重新挂一遍
+      fig.remove(fallbackFig); fallbackFig = null;
+      for (const [id, it] of [...live]) if (it.def.bone) { scene.remove(it.obj); live.delete(id); setTimeout(() => equip(it.def, { quiet: true }), 50); }
+    }
+    bones = {}; for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Head', 'RightHand', 'LeftHand']) { bones[n] = person.getObjectByName(n); baseQ[n] = bones[n]?.quaternion.clone(); }
     person.traverse(o => { if (o.isMesh && o.name === 'Wolf3D_Outfit_Top') outfitMat = o.material; });
-    recalcHand();
+    recalcHand(); $('loading').hidden = true; setLoad('摄影师已就位', 1);
+    return true;
   } catch (err) {
     console.warn('模型加载失败，改用简易人形', err);
-    const m = mannequinFallback(); fig.add(m); bones = { Hips: m, Spine2: m, RightHand: m };
+    if (!fallbackFig) { fallbackFig = mannequinFallback(); fig.add(fallbackFig); bones = { Hips: fallbackFig, Spine2: fallbackFig, RightHand: fallbackFig }; }
+    setLoad(`人物模型没载入，先用简易人形代替（${String(err?.message || err).slice(0, 36)}）`); $('retryBtn').hidden = false;
+    return false;
   }
-  $('loading').hidden = true;
-  thumbs = makeThumbs(); renderStep();
+}
+$('retryBtn').onclick = () => { Snd.tap(); loadPerson().then(ok => { if (ok) { thumbs = makeThumbs(); renderStep(); toast('摄影师已就位'); } }); };
+async function boot(data = {}) {
+  await loadPerson();
+  try { thumbs = makeThumbs(); } catch (err) { reportErr('缩略图生成失败', err); }
+  renderStep();
   if (data.mode === 'event' && data.ev?.days) {
     started = true; $('splash').hidden = true; fig.visible = true; setMode('event', true);
     Object.assign(state.ev, { days: data.ev.days, reh: data.ev.reh, tax: data.ev.tax }); syncEvFree(true);
